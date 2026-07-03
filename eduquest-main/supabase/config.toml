@@ -1,0 +1,16 @@
+project_id = "oeaowgbycenftvhwonyb"
+
+[functions.student-login]
+verify_jwt = false
+
+[functions.create-student]
+verify_jwt = true
+
+[functions.manage-teacher]
+verify_jwt = true
+
+[functions.generate-quiz]
+verify_jwt = false
+
+[functions.reset-student-pin]
+verify_jwt = true

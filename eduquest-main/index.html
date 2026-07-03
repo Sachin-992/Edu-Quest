@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>
+    (function () {
+      const stored = localStorage.getItem("eq_theme");
+      if (stored === "dark" || stored === "light") {
+        document.documentElement.classList.add(stored);
+      } else {
+        const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        document.documentElement.classList.add(systemPrefersDark ? "dark" : "light");
+      }
+    })();
+  </script>
+
+  <!-- Layer 1: Pre-warm Supabase connection (saves ~200ms on first auth call) -->
+  <link rel="dns-prefetch" href="https://fyfobyugklvemjfnqojb.supabase.co" />
+  <link rel="preconnect" href="https://fyfobyugklvemjfnqojb.supabase.co" crossorigin />
+
+  <title>EduSpark Quest – Gamified Learning Platform</title>
+  <meta name="description"
+    content="EduSpark Quest – A futuristic and gamified learning platform for students to master Math, Science, English, and தமிழ் through quizzes, custom avatars, leaderboards, and rewards." />
+  <meta name="author" content="EduSpark Quest" />
+  <meta name="theme-color" content="#6366F1" />
+  <link rel="icon" type="image/png" href="/eduquest-logo.png" />
+  <link rel="apple-touch-icon" href="/eduquest-logo.png" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="canonical" href="https://eduquest.scrollkurai.in/" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="EduSpark Quest – Gamified Learning Platform" />
+  <meta property="og:description"
+    content="Learn Math, Science, English & தமிழ் through gamified quizzes, custom interactive avatars, and real-time leaderboards." />
+  <meta property="og:image" content="https://eduquest.scrollkurai.in/og-image.png" />
+  <meta property="og:url" content="https://eduquest.scrollkurai.in/" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="EduSpark Quest – Gamified Learning Platform" />
+  <meta name="twitter:description" content="Futuristic learning with customizable avatars, interactive stories, and gamified leaderboards." />
+  <meta name="twitter:image" content="https://eduquest.scrollkurai.in/og-image.png" />
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
+</html>

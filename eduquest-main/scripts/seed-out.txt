@@ -1,0 +1,50 @@
+﻿[dotenv@17.3.1] injecting env (5) from .env -- tip: ⚙️  enable debug logging with { debug: true }
+🔐 Signed in as admin: balanperiyasamy21@gmail.com
+🚀 Bulk Question Bank Seeder — Class 1–8
+
+
+━━━ Class 1 ━━━
+  ✅ Maths: 30 questions inserted
+  ✅ English: 30 questions inserted
+  ✅ Science: 30 questions inserted
+
+━━━ Class 2 ━━━
+  ✅ Maths: 30 questions inserted
+  ✅ English: 30 questions inserted
+  ✅ Science: 30 questions inserted
+
+━━━ Class 3 ━━━
+  ✅ Maths: 30 questions inserted
+  ✅ English: 30 questions inserted
+  ✅ Science: 30 questions inserted
+
+━━━ Class 4 ━━━
+  ✅ Maths: 30 questions inserted
+  ✅ English: 30 questions inserted
+  ✅ Science: 30 questions inserted
+
+━━━ Class 5 ━━━
+  ✅ Maths: 30 questions inserted
+  ✅ English: 30 questions inserted
+  ✅ Science: 30 questions inserted
+
+━━━ Class 6 ━━━
+  ✅ Maths: 30 questions inserted
+  ✅ English: 30 questions inserted
+  ✅ Science: 30 questions inserted
+
+━━━ Class 7 ━━━
+  ✅ Maths: 30 questions inserted
+  ✅ English: 30 questions inserted
+  ✅ Science: 30 questions inserted
+
+━━━ Class 8 ━━━
+  ✅ Maths: 30 questions inserted
+  ✅ English: 30 questions inserted
+  ✅ Science: 30 questions inserted
+
+════════════════════════════════════════
+✅ Total inserted: 720 questions
+🎉 Zero errors — all validations passed!
+════════════════════════════════════════
+
