@@ -220,6 +220,7 @@ const LevelUpCelebration = ({ totalXP, onDismiss }: LevelUpCelebrationProps) => 
             const currentLocalGems = parseInt(localStorage.getItem('eq_gems') || '0', 10);
             localStorage.setItem('eq_coins', String(currentLocalCoins + coinsToAward));
             localStorage.setItem('eq_gems', String(currentLocalGems + gemsToAward));
+            window.dispatchEvent(new Event("wallet_update"));
           }
         } catch (error) {
           console.error("Error in checkAndAwardRankRewards:", error);

@@ -70,12 +70,24 @@ const AddStudentDialog = ({ schoolId, onStudentAdded }: AddStudentDialogProps) =
         });
 
         if (res.error) throw res.error;
-        if (res.data?.error) throw new Error(res.data.error);
-        success = true;
       } catch (edgeFnErr: any) {
-        console.error("[AddStudent] Edge Function error:", edgeFnErr.message);
+        console.error("[AddStudent] Edge Function error:", edgeFnErr);
+        let errorMsg = edgeFnErr.message;
+        
+        if (edgeFnErr.context && typeof edgeFnErr.context.json === "function") {
+          try {
+            // Read the JSON response body
+            const errBody = await edgeFnErr.context.json();
+            if (errBody && errBody.error) {
+              errorMsg = errBody.error;
+            }
+          } catch (e) {
+            console.error("[AddStudent] Failed to parse error response context:", e);
+          }
+        }
+        
         throw new Error(
-          "Failed to create student. Please ensure the create-student Edge Function is deployed to Supabase."
+          errorMsg || "Failed to create student. Please check network/config or if the Edge Function is deployed."
         );
       }
 

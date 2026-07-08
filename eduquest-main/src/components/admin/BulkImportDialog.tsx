@@ -152,7 +152,18 @@ const BulkImportDialog = ({ schoolId, onImportComplete }: BulkImportDialogProps)
                 });
 
                 if (res.error || res.data?.error) {
-                    errors.push(`${row.roll_number}: ${res.data?.error || res.error?.message}`);
+                    let errMsg = res.data?.error || res.error?.message;
+                    if (res.error?.context && typeof res.error.context.json === "function") {
+                        try {
+                            const errBody = await res.error.context.json();
+                            if (errBody && errBody.error) {
+                                errMsg = errBody.error;
+                            }
+                        } catch (e) {
+                            console.error("[BulkImport] Failed to parse error response context:", e);
+                        }
+                    }
+                    errors.push(`${row.roll_number}: ${errMsg}`);
                     failed++;
                 } else {
                     success++;

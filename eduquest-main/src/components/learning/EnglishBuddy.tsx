@@ -358,8 +358,8 @@ const LOCAL_LESSONS = [
 
 // Local fallback Words of the Day
 const LOCAL_WORDS = [
-  { id: "w-1", word: "Persistence", meaning: "Continuing to do something even if it is difficult.", pronunciation: "per-sis-tens", emoji: "🔥", example_sentence: "Her persistence helped her learn to play the violin perfectly.", explanation: "Never giving up even when things get hard.", synonyms: ["determination", "perseverance", "grit"], date: new Date().toISOString().slice(0,10) },
-  { id: "w-2", word: "Curious", meaning: "Eager to know or learn something new.", pronunciation: "kyoo-ree-uhs", emoji: "🔬", example_sentence: "The curious student asked many questions about the solar system.", explanation: "Always wanting to find out how things work.", synonyms: ["inquisitive", "interested", "inquiring"], date: new Date(Date.now() + 86400000).toISOString().slice(0,10) }
+  { id: "11111111-1111-1111-1111-111111111111", word: "Persistence", meaning: "Continuing to do something even if it is difficult.", pronunciation: "per-sis-tens", emoji: "🔥", example_sentence: "Her persistence helped her learn to play the violin perfectly.", explanation: "Never giving up even when things get hard.", synonyms: ["determination", "perseverance", "grit"], date: new Date().toISOString().slice(0,10) },
+  { id: "22222222-2222-2222-2222-222222222222", word: "Curious", meaning: "Eager to know or learn something new.", pronunciation: "kyoo-ree-uhs", emoji: "🔬", example_sentence: "The curious student asked many questions about the solar system.", explanation: "Always wanting to find out how things work.", synonyms: ["inquisitive", "interested", "inquiring"], date: new Date(Date.now() + 86400000).toISOString().slice(0,10) }
 ];
 
 interface EnglishBuddyProps {

@@ -63,7 +63,40 @@ function writeCache(userId: string, role: AppRole, profile: AuthContextType["pro
 }
 
 function clearCache() {
-  try { localStorage.removeItem(CACHE_KEY); } catch { /* ignore */ }
+  try {
+    localStorage.removeItem(CACHE_KEY);
+    
+    // Clear all user-specific items from localStorage
+    localStorage.removeItem("eq_coins");
+    localStorage.removeItem("eq_gems");
+    localStorage.removeItem("eq_streak_freezes");
+    localStorage.removeItem("eq_avatar_discount");
+    localStorage.removeItem("eq_active_title");
+    localStorage.removeItem("eq_profile_views");
+    localStorage.removeItem("eq_last_seen_rank");
+    localStorage.removeItem("eq_eb_xp");
+    localStorage.removeItem("eq_eb_coins");
+    localStorage.removeItem("eq_eb_streak");
+    localStorage.removeItem("eq_ebg_total_xp");
+    localStorage.removeItem("eq_ebg_games_played");
+    localStorage.removeItem("eq_ls_completed");
+    localStorage.removeItem("last_free_spin");
+    
+    // Clean up dynamic daily keys
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith("eq_") || key.startsWith("last_") || key.includes("comp_"))) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(k => localStorage.removeItem(k));
+    
+    // Dispatch custom event to notify listening wallet/header widgets to reset/reload
+    window.dispatchEvent(new Event("wallet_update"));
+  } catch (e) {
+    console.error("Failed to clear local storage cache:", e);
+  }
 }
 
 /* ── Provider ── */

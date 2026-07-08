@@ -70,6 +70,8 @@ import EnhancedProfileCard from "@/components/learning/EnhancedProfileCard";
 import EnglishBuddyGames from "@/components/learning/english-buddy/EnglishBuddyGames";
 import GemWallet from "@/components/learning/GemWallet";
 import LevelUpCelebration from "@/components/learning/LevelUpCelebration";
+import NMMSHub from "@/components/nmms/NMMSHub";
+
 
 
 type View =
@@ -78,7 +80,7 @@ type View =
   | { screen: "lessons"; subject: Subject }
   | { screen: "lesson"; subject: Subject; lesson: Lesson }
   | { screen: "tamil_games" }
-  | { screen: "fun_corner_game"; initialGame: GameType }
+  | { screen: "fun_corner_game"; initialGame?: GameType }
   | { screen: "adventure" }
   | { screen: "avatar_shop" }
   | { screen: "leaderboard" }
@@ -87,6 +89,7 @@ type View =
   | { screen: "english_buddy" }
   | { screen: "english_games" }
   | { screen: "streak_freeze" }
+  | { screen: "nmms" }
   | { screen: "life_skills" };
 
 const THEME_TRANSLATIONS: Record<string, { en: string; ta: string }> = {
@@ -446,6 +449,9 @@ const StudentDashboard = () => {
         const totalGems = Math.max(0, Math.floor(xp / 100) + (perfectCount * 2) + gemsAwarded - gemsSpent);
         setGems(totalGems);
         localStorage.setItem("eq_gems", String(totalGems));
+
+        // Notify other components (like GemWallet) to read fresh localStorage values
+        window.dispatchEvent(new Event("wallet_update"));
 
         // 5. Process Equipped Items (already fetched)
         const equipped = equippedRes.data;
@@ -1054,7 +1060,7 @@ const StudentDashboard = () => {
                     <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{t('lobby_mini_games')}</div>
                     
                     <button
-                      onClick={() => setView({ screen: "fun_corner_game", initialGame: "quiz" })}
+                      onClick={() => setView({ screen: "fun_corner_game" })}
                       className="w-full flex items-center justify-between p-2.5 rounded-xl bg-muted/15 hover:bg-muted/30 border border-border/30 hover:border-purple-500/30 transition-all text-left"
                     >
                       <div className="flex items-center gap-2">
@@ -1107,6 +1113,20 @@ const StudentDashboard = () => {
                         </div>
                       </div>
                       <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+                    </button>
+
+                    <button
+                      onClick={() => setView({ screen: "nmms" })}
+                      className="w-full flex items-center justify-between p-2.5 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 hover:from-purple-500/25 hover:to-pink-500/25 border border-purple-500/30 hover:border-purple-500/60 transition-all text-left shadow-[0_0_12px_rgba(168,85,247,0.15)]"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">🏆</span>
+                        <div>
+                          <div className="text-xs font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">{isTamil ? "NMMS உதவித்தொகை தேர்வு" : "NMMS Scholarship Prep"}</div>
+                          <div className="text-[9px] text-muted-foreground font-semibold">{isTamil ? "₹48,000 உதவித்தொகை பெற பயிற்சி செய்யுங்கள்!" : "Solve MAT & SAT questions, win ₹48,000!"}</div>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-3.5 h-3.5 text-purple-400" />
                     </button>
                   </div>
                 </div>
@@ -1414,6 +1434,21 @@ const StudentDashboard = () => {
         {/* ══ English Buddy View ══ */}
         {view.screen === "english_buddy" && (
           <EnglishBuddy onBack={goBack} />
+        )}
+
+        {/* ══ Fun Corner View ══ */}
+        {view.screen === "fun_corner_game" && (
+          <div className="text-left">
+            <FunCorner
+              initialGame={view.initialGame}
+              onBack={goBack}
+            />
+          </div>
+        )}
+
+        {/* ══ NMMS Hub View ══ */}
+        {view.screen === "nmms" && (
+          <NMMSHub onBack={goBack} />
         )}
 
         {/* ══ English Games View ══ */}
