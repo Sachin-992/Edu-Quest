@@ -19,7 +19,8 @@ import {
   ChevronRight,
   Globe,
   Settings,
-  X
+  X,
+  Lock
 } from "lucide-react";
 import type { Subject, Lesson } from "@/types/learning";
 import SubjectBrowser from "@/components/learning/SubjectBrowser";
@@ -48,6 +49,7 @@ import AchievementTracker from "@/components/learning/AchievementTracker";
 import BadgeCollection from "@/components/learning/BadgeCollection";
 import { supabase } from "@/integrations/supabase/client";
 import type { BadgeStats } from "@/lib/retentionEngine";
+import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   DropdownMenu,
@@ -113,9 +115,10 @@ const DEFAULT_CHARACTER_CONFIG: CharacterConfig = {
 };
 
 const StudentDashboard = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, motivationProgress } = useAuth();
   const { language } = useLanguageStore();
   const { t } = useTranslation();
+  const { toast } = useToast();
   const isTamil = language === "ta";
 
   // Navigation History Stack
@@ -149,6 +152,75 @@ const StudentDashboard = () => {
 
   // Forward Navigation Wrapper
   const setView = (newView: View) => {
+    const curLevel = motivationProgress?.current_level ?? 1;
+
+    // Check level gating requirements globally
+    if (newView.screen === "subjects" && curLevel < 1) {
+      toast({
+        title: isTamil ? "அம்சம் பூட்டப்பட்டுள்ளது! 🔒" : "Feature Locked! 🔒",
+        description: isTamil 
+          ? "பாடங்களைத் திறக்க நிலை 1-ஐ அடையுங்கள்!" 
+          : "Reach Level 1 to unlock Subjects!",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (newView.screen === "adventure" && curLevel < 3) {
+      toast({
+        title: isTamil ? "அம்சம் பூட்டப்பட்டுள்ளது! 🔒" : "Feature Locked! 🔒",
+        description: isTamil 
+          ? "சாகச வரைபடத்தைத் திறக்க நிலை 3-ஐ அடையுங்கள்!" 
+          : "Reach Level 3 to unlock Adventure Map!",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (newView.screen === "tamil_games" && curLevel < 5) {
+      toast({
+        title: isTamil ? "அம்சம் பூட்டப்பட்டுள்ளது! 🔒" : "Feature Locked! 🔒",
+        description: isTamil 
+          ? "தமிழ் சவால்களைத் திறக்க நிலை 5-ஐ அடையுங்கள்!" 
+          : "Reach Level 5 to unlock Tamil Quest!",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if ((newView.screen === "english_buddy" || newView.screen === "english_games") && curLevel < 10) {
+      toast({
+        title: isTamil ? "அம்சம் பூட்டப்பட்டுள்ளது! 🔒" : "Feature Locked! 🔒",
+        description: isTamil 
+          ? "ஆங்கில நண்பனைத் திறக்க நிலை 10-ஐ அடையுங்கள்!" 
+          : "Reach Level 10 to unlock English Buddy!",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (newView.screen === "life_skills" && curLevel < 15) {
+      toast({
+        title: isTamil ? "அம்சம் பூட்டப்பட்டுள்ளது! 🔒" : "Feature Locked! 🔒",
+        description: isTamil 
+          ? "வாழ்க்கைத்திறன் உலகத்தைத் திறக்க நிலை 15-ஐ அடையுங்கள்!" 
+          : "Reach Level 15 to unlock Life Skills World!",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (newView.screen === "nmms" && curLevel < 20) {
+      toast({
+        title: isTamil ? "அம்சம் பூட்டப்பட்டுள்ளது! 🔒" : "Feature Locked! 🔒",
+        description: isTamil 
+          ? "NMMS தேர்வைத் திறக்க நிலை 20-ஐ அடையுங்கள்!" 
+          : "Reach Level 20 to unlock NMMS Scholarship Prep!",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setViewState((prev) => {
       // Don't push to history if it is the same view to prevent duplicate entries
       if (prev.screen !== newView.screen || JSON.stringify(prev) !== JSON.stringify(newView)) {
@@ -585,13 +657,7 @@ const StudentDashboard = () => {
 
   const handleNavClick = (id: typeof bottomNavItems[number]["id"]) => {
     setHistoryState([]);
-    switch (id) {
-      case "home": setViewState({ screen: "home" }); break;
-      case "subjects": setViewState({ screen: "subjects" }); break;
-      case "adventure": setViewState({ screen: "adventure" }); break;
-      case "leaderboard": setViewState({ screen: "leaderboard" }); break;
-      case "character_creator": setViewState({ screen: "character_creator" }); break;
-    }
+    setView({ screen: id as any });
   };
 
   // Render dynamic background theme
@@ -984,267 +1050,423 @@ const StudentDashboard = () => {
             </div>
           </div>
         )}
+
         {view.screen === "home" && !dataLoading && (
           <div className="space-y-8 pb-28">
-            {/* Main Gaming Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+            {/* Main Gaming Grid - Revamped 2-Column Lobby */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               
-              {/* LEFT: MATCHMAKING CARD */}
-              <motion.div
-                initial={{ opacity: 0, x: -40 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ type: 'spring', stiffness: 200, damping: 20, delay: 0.15 }}
-                className="lg:col-span-3 game-card game-glow-cyan p-5 flex flex-col justify-between relative overflow-hidden card-shimmer"
-              >
-                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:15px_15px] pointer-events-none" />
+              {/* LEFT/CENTER MAIN COLUMN: col-span-8 (Learning Quests & Game Modes front and center) */}
+              <div className="lg:col-span-8 space-y-6 flex flex-col">
                 
-                <div>
-                  <div className="text-[10px] font-black text-cyan-600 dark:text-cyan-400 uppercase tracking-widest mb-3">{t('lobby_matchmaker')}</div>
-                  <h3 className="text-base font-black text-foreground">{t('lobby_ready')}</h3>
-                  <p className="text-xs text-muted-foreground mt-1">{t('lobby_desc')}</p>
+                {/* WIDE QUEST MATCHMAKER PORTAL */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="w-full bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 p-6 relative overflow-hidden card-shimmer rounded-3xl shadow-xl shadow-primary/5"
+                >
+                  <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:15px_15px] pointer-events-none" />
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                    {/* Left side: Ready Call to Action */}
+                    <div className="md:col-span-7 space-y-3 text-left">
+                      <div className="inline-flex items-center gap-1.5 bg-cyan-500/10 border border-cyan-500/30 px-3 py-1 rounded-full text-cyan-500 dark:text-cyan-400 text-[10px] font-black uppercase tracking-wider">
+                        {t('lobby_matchmaker')}
+                      </div>
+                      <h3 className="text-xl font-black text-foreground">{t('lobby_ready')}</h3>
+                      <p className="text-xs text-muted-foreground leading-relaxed">{t('lobby_desc')}</p>
 
-                  <motion.button
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
-                    onClick={() => {
-                      if (resumeData) {
-                        handleResumeLearning(resumeData.subject, resumeData.lesson);
-                      } else {
-                        setView({ screen: "subjects" });
-                      }
-                    }}
-                    className="w-full relative overflow-hidden rounded-2xl bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 text-white font-black py-4.5 shadow-[0_0_20px_rgba(245,158,11,0.35)] text-sm uppercase tracking-wider group mt-5 flex items-center justify-center gap-2 btn-shake-attention btn-glow-pulse"
-                    style={{ '--glow-color': 'rgba(245, 158, 11, 0.45)' } as React.CSSProperties}
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => {
+                          if (resumeData) {
+                            handleResumeLearning(resumeData.subject, resumeData.lesson);
+                          } else {
+                            setView({ screen: "subjects" });
+                          }
+                        }}
+                        className="w-full relative overflow-hidden rounded-2xl bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 text-white font-black py-4 shadow-[0_0_20px_rgba(245,158,11,0.35)] text-xs uppercase tracking-wider group mt-3 flex items-center justify-center gap-2 btn-shake-attention btn-glow-pulse"
+                        style={{ '--glow-color': 'rgba(245, 158, 11, 0.45)' } as React.CSSProperties}
+                      >
+                        <div className="absolute inset-0 rounded-2xl border-2 border-white/20 animate-ping opacity-60 pointer-events-none" />
+                        <Play className="w-4 h-4 fill-white text-white" />
+                        {t('lobby_start_quest')}
+                      </motion.button>
+                    </div>
+
+                    {/* Right side: Resume Card */}
+                    <div className="md:col-span-5">
+                      <div className="bg-card/60 backdrop-blur border border-border/30 rounded-2xl p-4 shadow-inner">
+                        {resumeData ? (
+                          <>
+                            <div className="text-[9px] font-black text-muted-foreground text-left uppercase tracking-widest mb-2">{t('lobby_resume_lesson')}</div>
+                            <div className="flex items-center gap-2.5 mb-3">
+                              <span className="text-3xl">{resumeData.subject.icon}</span>
+                              <div className="min-w-0 text-left">
+                                <div className="text-xs font-black text-foreground truncate">{isTamil && resumeData.subject.name_tamil ? resumeData.subject.name_tamil : resumeData.subject.name}</div>
+                                <div className="text-[10px] text-muted-foreground font-bold truncate">{resumeData.lesson.title}</div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-1.5 bg-muted/30 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-gradient-to-r from-cyan-400 to-indigo-500"
+                                  style={{ width: `${Math.round((resumeData.completedCount / resumeData.totalCount) * 100)}%` }}
+                                />
+                              </div>
+                              <span className="text-[9px] font-bold text-muted-foreground shrink-0">
+                                {resumeData.completedCount}/{resumeData.totalCount}
+                              </span>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-center py-4">
+                            <div className="text-3xl mb-1">🎉</div>
+                            <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">{t('lobby_challenge_cleared')}</div>
+                            <p className="text-[10px] text-muted-foreground">{t('lobby_choose_subject')}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* GAME WORLDS HEADER */}
+                <div className="text-left mt-2 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-black text-foreground uppercase tracking-wider">{isTamil ? "விளையாட்டு உலகங்கள்" : "Game Worlds"}</h2>
+                    <p className="text-xs text-muted-foreground">{isTamil ? "உங்கள் சாகசத்தைத் தேர்ந்தெடுத்து புள்ளிகளைப் பெறுங்கள்!" : "Choose your learning adventure and start playing!"}</p>
+                  </div>
+                </div>
+
+                {/* GAME WORLDS GRID */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  
+                  {/* 1. Fun Corner (Level 1+) */}
+                  <motion.div
+                    whileHover={{ y: -3, scale: 1.01 }}
+                    onClick={() => setView({ screen: "fun_corner_game" })}
+                    className="cursor-pointer bg-card hover:bg-card/90 bg-gradient-to-br from-purple-500/10 via-indigo-500/5 to-transparent border-2 border-purple-500/20 hover:border-purple-500/50 rounded-3xl p-5 text-left flex flex-col justify-between h-40 transition-all group relative overflow-hidden shadow-md shadow-purple-500/5 hover:shadow-lg"
                   >
-                    <div className="absolute inset-0 rounded-2xl border-2 border-white/20 animate-ping opacity-60 pointer-events-none" />
-                    <Play className="w-5 h-5 fill-white text-white" />
-                    {t('lobby_start_quest')}
-                  </motion.button>
-                </div>
+                    <div className="absolute right-0 top-0 text-7xl opacity-10 select-none translate-x-3 -translate-y-3 group-hover:scale-110 transition-transform duration-300">🎮</div>
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-2xl">🎮</span>
+                        <span className="text-[9px] font-black uppercase tracking-wider text-purple-600 dark:text-purple-400 bg-purple-500/15 border border-purple-500/30 px-2 py-0.5 rounded-full">Level 1+</span>
+                      </div>
+                      <h4 className="text-sm font-black text-foreground">{t('lobby_fun_corner')}</h4>
+                      <p className="text-xs text-muted-foreground mt-1 leading-normal">{t('lobby_fun_corner_desc')}</p>
+                    </div>
+                    <div className="flex items-center gap-1 text-[10px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-widest mt-2 group-hover:translate-x-1 transition-transform">
+                      {isTamil ? "விளையாடு" : "PLAY NOW"} <ChevronRight className="w-3.5 h-3.5" />
+                    </div>
+                  </motion.div>
 
-                <div className="space-y-4 mt-6">
-                  {/* Current Learning info */}
-                  <div className="bg-muted/20 border border-border/30 rounded-2xl p-4">
-                    {resumeData ? (
-                      <>
-                        <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-2">{t('lobby_resume_lesson')}</div>
-                        <div className="flex items-center gap-2.5 mb-3">
-                          <span className="text-2xl">{resumeData.subject.icon}</span>
-                          <div className="min-w-0">
-                            <div className="text-xs font-black text-foreground truncate">{isTamil && resumeData.subject.name_tamil ? resumeData.subject.name_tamil : resumeData.subject.name}</div>
-                            <div className="text-[10px] text-muted-foreground font-bold truncate">{resumeData.lesson.title}</div>
+                  {/* 2. Tamil Quest (Level 5+) */}
+                  {(() => {
+                    const reqLvl = 5;
+                    const isLocked = (motivationProgress?.current_level ?? 1) < reqLvl;
+                    return (
+                      <motion.div
+                        whileHover={isLocked ? {} : { y: -3, scale: 1.01 }}
+                        onClick={() => {
+                          if (isLocked) {
+                            toast({
+                              title: isTamil ? "அம்சம் பூட்டப்பட்டுள்ளது! 🔒" : "Feature Locked! 🔒",
+                              description: isTamil 
+                                ? `தமிழ் சவால்களைத் திறக்க நிலை ${reqLvl}-ஐ அடையுங்கள்!` 
+                                : `Reach Level ${reqLvl} to unlock Tamil Quest!`,
+                              variant: "destructive"
+                            });
+                            return;
+                          }
+                          setView({ screen: "tamil_games" });
+                        }}
+                        className={`cursor-pointer border-2 rounded-3xl p-5 text-left flex flex-col justify-between h-40 transition-all group relative overflow-hidden ${
+                          isLocked 
+                            ? "bg-card/45 border-dashed border-border/70 hover:bg-card/65 opacity-80 cursor-pointer shadow-inner" 
+                            : "bg-card hover:bg-card/90 bg-gradient-to-br from-red-500/10 via-orange-500/5 to-transparent border-red-500/20 hover:border-red-500/50 shadow-md shadow-red-500/5 hover:shadow-lg"
+                        }`}
+                      >
+                        <div className="absolute right-0 top-0 text-7xl opacity-10 select-none translate-x-3 -translate-y-3 group-hover:scale-110 transition-transform duration-300">🐯</div>
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-2xl">🐯</span>
+                            <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                              isLocked 
+                                ? "text-muted-foreground bg-muted/20 border-border/40" 
+                                : "text-red-600 dark:text-red-400 bg-red-500/15 border-red-500/30"
+                            }`}>
+                              Level 5+
+                            </span>
                           </div>
+                          <h4 className="text-sm font-black text-foreground flex items-center gap-1.5">
+                            {t('lobby_tamil_quest')}
+                            {isLocked && <Lock className="w-3.5 h-3.5 text-muted-foreground/60" />}
+                          </h4>
+                          <p className="text-xs text-muted-foreground mt-1 leading-normal">{t('lobby_tamil_quest_desc')}</p>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-1.5 bg-muted/30 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-gradient-to-r from-amber-400 to-orange-500"
-                              style={{ width: `${Math.round((resumeData.completedCount / resumeData.totalCount) * 100)}%` }}
-                            />
+                        <div className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest mt-2 ${
+                          isLocked ? "text-muted-foreground/60" : "text-red-500 group-hover:translate-x-1 transition-transform"
+                        }`}>
+                          {isLocked ? (isTamil ? "பூட்டப்பட்டது 🔒" : "LOCKED 🔒") : <>{isTamil ? "விளையாடு" : "PLAY NOW"} <ChevronRight className="w-3.5 h-3.5" /></>}
+                        </div>
+                      </motion.div>
+                    );
+                  })()}
+
+                  {/* 3. English Buddy (Level 10+) */}
+                  {(() => {
+                    const reqLvl = 10;
+                    const isLocked = (motivationProgress?.current_level ?? 1) < reqLvl;
+                    return (
+                      <motion.div
+                        whileHover={isLocked ? {} : { y: -3, scale: 1.01 }}
+                        onClick={() => {
+                          if (isLocked) {
+                            toast({
+                              title: isTamil ? "அம்சம் பூட்டப்பட்டுள்ளது! 🔒" : "Feature Locked! 🔒",
+                              description: isTamil 
+                                ? `ஆங்கில நண்பனைத் திறக்க நிலை ${reqLvl}-ஐ அடையுங்கள்!` 
+                                : `Reach Level ${reqLvl} to unlock English Buddy!`,
+                              variant: "destructive"
+                            });
+                            return;
+                          }
+                          setView({ screen: "english_buddy" });
+                        }}
+                        className={`cursor-pointer border-2 rounded-3xl p-5 text-left flex flex-col justify-between h-40 transition-all group relative overflow-hidden ${
+                          isLocked 
+                            ? "bg-card/45 border-dashed border-border/70 hover:bg-card/65 opacity-80 cursor-pointer shadow-inner" 
+                            : "bg-card hover:bg-card/90 bg-gradient-to-br from-indigo-500/10 via-blue-500/5 to-transparent border-indigo-500/20 hover:border-indigo-500/50 shadow-md shadow-indigo-500/5 hover:shadow-lg"
+                        }`}
+                      >
+                        <div className="absolute right-0 top-0 text-7xl opacity-10 select-none translate-x-3 -translate-y-3 group-hover:scale-110 transition-transform duration-300">🤖</div>
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-2xl">🤖</span>
+                            <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                              isLocked 
+                                ? "text-muted-foreground bg-muted/20 border-border/40" 
+                                : "text-indigo-600 dark:text-indigo-400 bg-indigo-500/15 border-indigo-500/30"
+                            }`}>
+                              Level 10+
+                            </span>
                           </div>
-                          <span className="text-[9px] font-bold text-muted-foreground shrink-0">
-                            {resumeData.completedCount}/{resumeData.totalCount}
-                          </span>
+                          <h4 className="text-sm font-black text-foreground flex items-center gap-1.5">
+                            {isTamil ? "ஆங்கில நண்பன்" : "English Buddy"}
+                            {isLocked && <Lock className="w-3.5 h-3.5 text-muted-foreground/60" />}
+                          </h4>
+                          <p className="text-xs text-muted-foreground mt-1 leading-normal">{isTamil ? "AI மாஸ்கோட்டுடன் ஆங்கிலம் பேசலாம் & எழுதலாம்!" : "Speak & write English with AI mascot!"}</p>
                         </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">{t('lobby_challenge_cleared')}</div>
-                        <p className="text-[10px] text-muted-foreground">{t('lobby_choose_subject')}</p>
-                      </>
-                    )}
-                  </div>
+                        <div className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest mt-2 ${
+                          isLocked ? "text-muted-foreground/60" : "text-indigo-400 group-hover:translate-x-1 transition-transform"
+                        }`}>
+                          {isLocked ? (isTamil ? "பூட்டப்பட்டது 🔒" : "LOCKED 🔒") : <>{isTamil ? "விளையாடு" : "PLAY NOW"} <ChevronRight className="w-3.5 h-3.5" /></>}
+                        </div>
+                      </motion.div>
+                    );
+                  })()}
 
-                  {/* Quick Play shortcuts */}
-                  <div className="space-y-2">
-                    <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{t('lobby_mini_games')}</div>
-                    
-                    <button
-                      onClick={() => setView({ screen: "fun_corner_game" })}
-                      className="w-full flex items-center justify-between p-2.5 rounded-xl bg-muted/15 hover:bg-muted/30 border border-border/30 hover:border-purple-500/30 transition-all text-left"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">🎮</span>
+                  {/* 4. Life Skills World (Level 15+) */}
+                  {(() => {
+                    const reqLvl = 15;
+                    const isLocked = (motivationProgress?.current_level ?? 1) < reqLvl;
+                    return (
+                      <motion.div
+                        whileHover={isLocked ? {} : { y: -3, scale: 1.01 }}
+                        onClick={() => {
+                          if (isLocked) {
+                            toast({
+                              title: isTamil ? "அம்சம் பூட்டப்பட்டுள்ளது! 🔒" : "Feature Locked! 🔒",
+                              description: isTamil 
+                                ? `வாழ்க்கைத்திறன் உலகத்தைத் திறக்க நிலை ${reqLvl}-ஐ அடையுங்கள்!` 
+                                : `Reach Level ${reqLvl} to unlock Life Skills World!`,
+                              variant: "destructive"
+                            });
+                            return;
+                          }
+                          setView({ screen: "life_skills" });
+                        }}
+                        className={`cursor-pointer border-2 rounded-3xl p-5 text-left flex flex-col justify-between h-40 transition-all group relative overflow-hidden ${
+                          isLocked 
+                            ? "bg-card/45 border-dashed border-border/70 hover:bg-card/65 opacity-80 cursor-pointer shadow-inner" 
+                            : "bg-card hover:bg-card/90 bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-transparent border-emerald-500/20 hover:border-emerald-500/50 shadow-md shadow-emerald-500/5 hover:shadow-lg"
+                        }`}
+                      >
+                        <div className="absolute right-0 top-0 text-7xl opacity-10 select-none translate-x-3 -translate-y-3 group-hover:scale-110 transition-transform duration-300">🌍</div>
                         <div>
-                          <div className="text-xs font-bold text-foreground">{t('lobby_fun_corner')}</div>
-                          <div className="text-[9px] text-muted-foreground font-semibold">{t('lobby_fun_corner_desc')}</div>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-2xl">🌍</span>
+                            <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                              isLocked 
+                                ? "text-muted-foreground bg-muted/20 border-border/40" 
+                                : "text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 border-emerald-500/30"
+                            }`}>
+                              Level 15+
+                            </span>
+                          </div>
+                          <h4 className="text-sm font-black text-foreground flex items-center gap-1.5">
+                            {isTamil ? "வாழ்க்கைத்திறன் உலகம்" : "Life Skills World"}
+                            {isLocked && <Lock className="w-3.5 h-3.5 text-muted-foreground/60" />}
+                          </h4>
+                          <p className="text-xs text-muted-foreground mt-1 leading-normal">{isTamil ? "புத்திசாலித்தனமான முடிவுகளை எடுத்து பேட்ஜ்களை வெல்லுங்கள்!" : "Make smart decisions & earn badges!"}</p>
                         </div>
-                      </div>
-                      <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
-                    </button>
+                        <div className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest mt-2 ${
+                          isLocked ? "text-muted-foreground/60" : "text-emerald-500 group-hover:translate-x-1 transition-transform"
+                        }`}>
+                          {isLocked ? (isTamil ? "பூட்டப்பட்டது 🔒" : "LOCKED 🔒") : <>{isTamil ? "விளையாடு" : "PLAY NOW"} <ChevronRight className="w-3.5 h-3.5" /></>}
+                        </div>
+                      </motion.div>
+                    );
+                  })()}
 
-                    <button
-                      onClick={() => setView({ screen: "tamil_games" })}
-                      className="w-full flex items-center justify-between p-2.5 rounded-xl bg-muted/15 hover:bg-muted/30 border border-border/30 hover:border-red-500/30 transition-all text-left"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">🐯</span>
+                  {/* 5. NMMS Scholarship Prep (Level 20+) */}
+                  {(() => {
+                    const reqLvl = 20;
+                    const isLocked = (motivationProgress?.current_level ?? 1) < reqLvl;
+                    return (
+                      <motion.div
+                        whileHover={isLocked ? {} : { y: -3, scale: 1.01 }}
+                        onClick={() => {
+                          if (isLocked) {
+                            toast({
+                              title: isTamil ? "அம்சம் பூட்டப்பட்டுள்ளது! 🔒" : "Feature Locked! 🔒",
+                              description: isTamil 
+                                ? `NMMS தேர்வைத் திறக்க நிலை ${reqLvl}-ஐ அடையுங்கள்!` 
+                                : `Reach Level ${reqLvl} to unlock NMMS Scholarship Prep!`,
+                              variant: "destructive"
+                            });
+                            return;
+                          }
+                          setView({ screen: "nmms" });
+                        }}
+                        className={`cursor-pointer border-2 rounded-3xl p-5 text-left flex flex-col justify-between h-40 transition-all group md:col-span-2 relative overflow-hidden ${
+                          isLocked 
+                            ? "bg-card/45 border-dashed border-border/70 hover:bg-card/65 opacity-80 cursor-pointer shadow-inner animate-pulse-subtle" 
+                            : "bg-card hover:bg-card/90 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-purple-500/20 hover:border-purple-500/60 shadow-lg shadow-purple-500/10"
+                        }`}
+                      >
+                        <div className="absolute right-0 top-0 text-7xl opacity-10 select-none translate-x-3 -translate-y-3 group-hover:scale-110 transition-transform duration-300">🏆</div>
                         <div>
-                          <div className="text-xs font-bold text-foreground">{t('lobby_tamil_quest')}</div>
-                          <div className="text-[9px] text-muted-foreground font-semibold">{t('lobby_tamil_quest_desc')}</div>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-2xl">🏆</span>
+                            <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                              isLocked 
+                                ? "text-muted-foreground bg-muted/20 border-border/40" 
+                                : "text-purple-600 dark:text-purple-400 bg-purple-500/15 border-purple-500/30"
+                            }`}>
+                              Level 20+
+                            </span>
+                          </div>
+                          <h4 className="text-sm font-black flex items-center gap-1.5">
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">{isTamil ? "NMMS உதவித்தொகை தேர்வு" : "NMMS Scholarship Prep"}</span>
+                            {isLocked && <Lock className="w-3.5 h-3.5 text-muted-foreground/60" />}
+                          </h4>
+                          <p className="text-xs text-muted-foreground mt-1 leading-normal">{isTamil ? "₹48,000 உதவித்தொகை பெற பயிற்சி செய்யுங்கள்!" : "Solve MAT & SAT questions, win ₹48,000!"}</p>
                         </div>
-                      </div>
-                      <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
-                    </button>
-
-                     <button
-                      onClick={() => setView({ screen: "english_buddy" })}
-                      className="w-full flex items-center justify-between p-2.5 rounded-xl bg-muted/15 hover:bg-muted/30 border border-border/30 hover:border-indigo-500/30 transition-all text-left"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">🤖</span>
-                        <div>
-                          <div className="text-xs font-bold text-foreground">{isTamil ? "ஆங்கில நண்பன்" : "English Buddy"}</div>
-                          <div className="text-[9px] text-muted-foreground font-semibold">{isTamil ? "AI மாஸ்கோட்டுடன் ஆங்கிலம் பேசலாம் & எழுதலாம்!" : "Speak & write English with AI mascot!"}</div>
+                        <div className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest mt-2 ${
+                          isLocked ? "text-muted-foreground/60" : "text-purple-400 group-hover:translate-x-1 transition-transform"
+                        }`}>
+                          {isLocked ? (isTamil ? "பூட்டப்பட்டது 🔒" : "LOCKED 🔒") : <>{isTamil ? "விளையாடு" : "PLAY NOW"} <ChevronRight className="w-3.5 h-3.5 text-purple-400" /></>}
                         </div>
-                      </div>
-                      <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
-                    </button>
-
-                    <button
-                      onClick={() => setView({ screen: "life_skills" })}
-                      className="w-full flex items-center justify-between p-2.5 rounded-xl bg-muted/15 hover:bg-muted/30 border border-border/30 hover:border-emerald-500/30 transition-all text-left"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">🌍</span>
-                        <div>
-                          <div className="text-xs font-bold text-foreground">{isTamil ? "வாழ்க்கைத்திறன் உலகம்" : "Life Skills World"}</div>
-                          <div className="text-[9px] text-muted-foreground font-semibold">{isTamil ? "புத்திசாலித்தனமான முடிவுகளை எடுத்து பேட்ஜ்களை வெல்லுங்கள்!" : "Make smart decisions & earn badges!"}</div>
-                        </div>
-                      </div>
-                      <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
-                    </button>
-
-                    <button
-                      onClick={() => setView({ screen: "nmms" })}
-                      className="w-full flex items-center justify-between p-2.5 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 hover:from-purple-500/25 hover:to-pink-500/25 border border-purple-500/30 hover:border-purple-500/60 transition-all text-left shadow-[0_0_12px_rgba(168,85,247,0.15)]"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">🏆</span>
-                        <div>
-                          <div className="text-xs font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">{isTamil ? "NMMS உதவித்தொகை தேர்வு" : "NMMS Scholarship Prep"}</div>
-                          <div className="text-[9px] text-muted-foreground font-semibold">{isTamil ? "₹48,000 உதவித்தொகை பெற பயிற்சி செய்யுங்கள்!" : "Solve MAT & SAT questions, win ₹48,000!"}</div>
-                        </div>
-                      </div>
-                      <ChevronRight className="w-3.5 h-3.5 text-purple-400" />
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* CENTER: CHARACTER LOBBY CARD */}
-              <motion.div
-                initial={{ opacity: 0, y: 30, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ type: 'spring', stiffness: 180, damping: 18, delay: 0.25 }}
-                className="lg:col-span-5 relative w-full rounded-3xl overflow-hidden shadow-2xl border border-border/30 flex flex-col justify-between min-h-[480px] h-[520px]"
-              >
-                {renderHeroBackground(equippedBg)}
-
-                {/* Top header badge */}
-                <div className="relative z-10 self-start m-4 bg-background/50 border border-border/40 backdrop-blur-sm px-3 py-1 rounded-full text-[9px] font-black tracking-wider uppercase text-primary">
-                  {t('lobby_theme')}: {(() => {
-                    const tKey = equippedBg.replace("bg-", "");
-                    const trans = THEME_TRANSLATIONS[tKey];
-                    return trans ? (isTamil ? trans.ta : trans.en) : tKey;
+                      </motion.div>
+                    );
                   })()}
                 </div>
+              </div>
 
-                {/* Floating Speech Bubble */}
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={quote}
-                    initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -10, scale: 0.9 }}
-                    className="absolute top-12 left-1/2 -translate-x-1/2 bg-card/90 text-card-foreground px-3.5 py-2.5 rounded-2xl shadow-2xl border border-border/80 max-w-[210px] text-center z-20 cursor-pointer"
-                    onClick={changeQuote}
-                  >
-                    <p className="text-xs font-bold leading-tight">{quote}</p>
-                    <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-card rotate-45 border-r border-b border-border/80" />
-                  </motion.div>
-                </AnimatePresence>
-
-                {/* Main Avatar Character SVG with click jumps */}
-                <div
-                  className="flex-1 flex items-center justify-center relative mt-10 mb-4 cursor-pointer"
-                  onClick={() => {
-                    setJumpKey((k) => k + 1);
-                    changeQuote();
-                  }}
+              {/* RIGHT SIDEBAR COLUMN: col-span-4 (Avatar Lobby Card, Daily Tasks & Lootbox launcher) */}
+              <div className="lg:col-span-4 space-y-6 flex flex-col">
+                
+                {/* CHARACTER LOBBY CARD (Secondary sidebar frame) */}
+                <motion.div
+                  initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 180, damping: 18, delay: 0.25 }}
+                  className="relative w-full rounded-3xl overflow-hidden shadow-xl border border-border/30 flex flex-col justify-between h-[390px] bg-card/60 backdrop-blur-sm"
                 >
-                  <motion.div
-                    key={jumpKey}
-                    animate={{
-                      y: jumpKey > 0 ? [-35, 5, -10, 0] : [0, 0],
-                      scaleX: jumpKey > 0 ? [1, 1.15, 0.92, 1.05, 1] : [1, 1],
-                      scaleY: jumpKey > 0 ? [1, 0.82, 1.18, 0.95, 1] : [1, 1],
-                      rotate: jumpKey > 0 ? [0, -3, 2, -1, 0] : [0, 0],
+                  {renderHeroBackground(equippedBg)}
+
+                  {/* Theme text tag */}
+                  <div className="relative z-10 self-start m-3 bg-background/50 border border-border/40 backdrop-blur-sm px-2.5 py-0.5 rounded-full text-[8px] font-black tracking-wider uppercase text-primary">
+                    {t('lobby_theme')}: {(() => {
+                      const tKey = equippedBg.replace("bg-", "");
+                      const trans = THEME_TRANSLATIONS[tKey];
+                      return trans ? (isTamil ? trans.ta : trans.en) : tKey;
+                    })()}
+                  </div>
+
+                  {/* Speech Bubble */}
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={quote}
+                      initial={{ opacity: 0, y: 5, scale: 0.9 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -5, scale: 0.9 }}
+                      className="absolute top-10 left-1/2 -translate-x-1/2 bg-card/90 text-card-foreground px-3 py-2 rounded-2xl shadow-xl border border-border/80 max-w-[185px] text-center z-20 cursor-pointer"
+                      onClick={changeQuote}
+                    >
+                      <p className="text-[10px] font-bold leading-tight">{quote}</p>
+                      <div className="absolute -bottom-1 w-2.5 h-2.5 bg-card rotate-45 border-r border-b border-border/80 left-1/2 -translate-x-1/2" />
+                    </motion.div>
+                  </AnimatePresence>
+
+                  {/* Avatar SVG (scaled down slightly for sidebar) */}
+                  <div
+                    className="flex-1 flex items-center justify-center relative mt-6 mb-2 cursor-pointer scale-75 origin-center"
+                    onClick={() => {
+                      setJumpKey((k) => k + 1);
+                      changeQuote();
                     }}
-                    transition={{
-                      type: "spring",
-                      stiffness: 350,
-                      damping: 10,
-                      mass: 0.8,
-                    }}
-                    className="relative z-10"
                   >
-                    {/* Ambient sparkle particles around character */}
-                    {[...Array(6)].map((_, i) => (
-                      <motion.div
-                        key={`sparkle-${i}`}
-                        className="absolute w-2 h-2 rounded-full pointer-events-none"
-                        style={{
-                          background: ['#fbbf24', '#a855f7', '#06b6d4', '#f43f5e', '#22c55e', '#ec4899'][i],
-                          left: `${20 + Math.cos(i * 1.05) * 40}%`,
-                          top: `${15 + Math.sin(i * 1.05) * 35}%`,
-                        }}
-                        animate={{
-                          y: [0, -15 - i * 4, 0],
-                          x: [0, (i % 2 === 0 ? 8 : -8), 0],
-                          scale: [0.5, 1.2, 0.5],
-                          opacity: [0.2, 0.9, 0.2],
-                        }}
-                        transition={{
-                          duration: 2.5 + i * 0.4,
-                          repeat: Infinity,
-                          ease: 'easeInOut',
-                          delay: i * 0.3,
-                        }}
-                      />
-                    ))}
-                    <CharacterSVG config={avatarConfig} pet={equippedPet} aura={equippedAura} />
-                  </motion.div>
-                </div>
+                    <motion.div
+                      key={jumpKey}
+                      animate={{
+                        y: jumpKey > 0 ? [-35, 5, -10, 0] : [0, 0],
+                        scaleX: jumpKey > 0 ? [1, 1.15, 0.92, 1.05, 1] : [1, 1],
+                        scaleY: jumpKey > 0 ? [1, 0.82, 1.18, 0.95, 1] : [1, 1],
+                        rotate: jumpKey > 0 ? [0, -3, 2, -1, 0] : [0, 0],
+                      }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 350,
+                        damping: 10,
+                        mass: 0.8,
+                      }}
+                      className="relative z-10"
+                    >
+                      <CharacterSVG config={avatarConfig} pet={equippedPet} aura={equippedAura} />
+                    </motion.div>
+                  </div>
 
-                {/* Bottom Stats Banner inside Lobby */}
-                <div className="relative z-10 m-4 bg-card/85 border border-border/50 backdrop-blur-xl p-3.5 rounded-2xl flex items-center justify-between text-foreground">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center shadow-lg text-xl select-none">
-                      {getRank(badgeStats.totalXP).emoji}
+                  {/* Bottom Stats Banner inside Sidebar */}
+                  <div className="relative z-10 m-3 bg-card/85 border border-border/50 backdrop-blur-xl p-2.5 rounded-2xl flex items-center justify-between text-foreground">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center shadow text-base select-none">
+                        {getRank(badgeStats.totalXP).emoji}
+                      </div>
+                      <div className="text-left leading-tight">
+                        <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">{t('lobby_level')} {getRank(badgeStats.totalXP).level}</p>
+                        <p className="text-xs font-black text-foreground truncate max-w-[90px]">{getRank(badgeStats.totalXP).name}</p>
+                      </div>
                     </div>
-                    <div className="text-left">
-                      <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">{t('lobby_level')} {getRank(badgeStats.totalXP).level}</p>
-                      <p className="text-sm font-black text-foreground">{getRank(badgeStats.totalXP).name}</p>
+                    <div className="flex flex-col items-end leading-tight">
+                      <div className="text-[11px] font-black text-foreground">{badgeStats.totalXP} {t('xp')}</div>
+                      <div className="text-[8px] text-muted-foreground font-semibold mt-0.5">
+                        {getNextRank(badgeStats.totalXP)
+                          ? `${getNextRank(badgeStats.totalXP)?.xpNeeded} ${t('lobby_xp_to_next')}`
+                          : t('lobby_max_rank')}
+                      </div>
                     </div>
                   </div>
-                  <div className="flex flex-col items-end">
-                    <div className="text-xs font-black text-foreground">{badgeStats.totalXP} {t('xp')}</div>
-                    <div className="text-[9px] text-muted-foreground font-semibold mt-0.5">
-                      {getNextRank(badgeStats.totalXP)
-                        ? `${getNextRank(badgeStats.totalXP)?.xpNeeded} ${t('lobby_xp_to_next')}`
-                        : t('lobby_max_rank')}
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
+                </motion.div>
 
-              {/* RIGHT: DAILY MISSIONS & CRATE LAUNCHER */}
-              <div className="lg:col-span-4 flex flex-col gap-6">
-                {/* Daily Mission widget */}
+                {/* 2. DAILY MISSIONS WIDGET */}
                 <DailyMission refreshTrigger={refreshGamification} />
 
-                {/* Lootbox Launcher Card */}
+                {/* 3. MYSTERY LOOTBOX LAUNCHER */}
                 <motion.div
                   initial={{ opacity: 0, x: 40 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -1257,19 +1479,19 @@ const StudentDashboard = () => {
                   <div className="relative z-10 text-left">
                     <div className="text-[10px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-widest mb-1">{t('reward_system')}</div>
                     <h3 className="text-sm font-black text-foreground">{t('mystery_lootbox')}</h3>
-                    <p className="text-xs text-muted-foreground mt-1">{t('lootbox_desc')}</p>
+                    <p className="text-xs text-muted-foreground mt-1 leading-normal">{t('lootbox_desc')}</p>
 
-                    <div className="my-5 flex justify-center">
+                    <div className="my-3 flex justify-center">
                       <motion.div
                         animate={{
-                          y: [-8, 8, -8],
-                          rotate: [-5, 5, -5],
-                          scale: [1, 1.08, 1],
+                          y: [-6, 6, -6],
+                          rotate: [-4, 4, -4],
+                          scale: [1, 1.05, 1],
                         }}
                         transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                        className="text-7xl filter drop-shadow-[0_10px_25px_rgba(168,85,247,0.5)] cursor-pointer select-none"
-                        whileHover={{ scale: 1.2, rotate: 15 }}
-                        whileTap={{ scale: 0.85, rotate: -10 }}
+                        className="text-6xl filter drop-shadow-[0_10px_25px_rgba(168,85,247,0.5)] cursor-pointer select-none"
+                        whileHover={{ scale: 1.15, rotate: 12 }}
+                        whileTap={{ scale: 0.9, rotate: -8 }}
                         onClick={() => setView({ screen: "avatar_shop" })}
                       >
                         🎁
@@ -1288,19 +1510,18 @@ const StudentDashboard = () => {
               </div>
             </div>
 
-            {/* Quick Access — features not in bottom nav */}
+            {/* Quick Access Utility Row - Badges, Shop, Leaderboards, Customization */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.45 }}
-              className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3"
+              className="grid grid-cols-2 md:grid-cols-4 gap-4"
             >
               {[
-                { id: 'english_buddy', label: isTamil ? 'ஆங்கில நண்பன்' : 'English Buddy', emoji: '🤖', gradient: 'from-indigo-500/15 to-blue-500/10', border: 'hover:border-indigo-500/40' },
-                { id: 'life_skills', label: isTamil ? 'வாழ்க்கைத்திறன்' : 'Life Skills', emoji: '🌍', gradient: 'from-emerald-500/15 to-teal-500/10', border: 'hover:border-emerald-500/40' },
-                { id: 'badges', label: t('nav_badges'), emoji: '🏆', gradient: 'from-amber-500/15 to-orange-500/10', border: 'hover:border-amber-500/40' },
-                { id: 'english_games', label: isTamil ? 'விளையாட்டுகள்' : 'Games', emoji: '🎮', gradient: 'from-purple-500/15 to-pink-500/10', border: 'hover:border-purple-500/40' },
-                { id: 'avatar_shop', label: t('nav_shop'), emoji: '🛍️', gradient: 'from-rose-500/15 to-red-500/10', border: 'hover:border-rose-500/40' },
+                { id: 'badges', label: t('nav_badges'), emoji: '🏆', gradient: 'from-amber-500/15 to-orange-500/10', border: 'hover:border-amber-500/40 text-amber-500 bg-amber-500/5' },
+                { id: 'avatar_shop', label: t('nav_shop'), emoji: '🛍️', gradient: 'from-rose-500/15 to-red-500/10', border: 'hover:border-rose-500/40 text-rose-500 bg-rose-500/5' },
+                { id: 'leaderboard', label: t('nav_leaderboard'), emoji: '🎖️', gradient: 'from-cyan-500/15 to-blue-500/10', border: 'hover:border-cyan-500/40 text-cyan-500 bg-cyan-500/5' },
+                { id: 'character_creator', label: isTamil ? 'உருவாக்கு' : 'Customize', emoji: '👤', gradient: 'from-purple-500/15 to-pink-500/10', border: 'hover:border-purple-500/40 text-purple-500 bg-purple-500/5' },
               ].map((item, i) => (
                 <motion.button
                   key={item.id}
@@ -1310,15 +1531,15 @@ const StudentDashboard = () => {
                   whileHover={{ scale: 1.04, y: -2 }}
                   whileTap={{ scale: 0.96 }}
                   onClick={() => setView({ screen: item.id as any })}
-                  className={`flex flex-col items-center gap-2 p-4 rounded-2xl bg-gradient-to-br ${item.gradient} border border-border/30 ${item.border} backdrop-blur-sm transition-all shadow-sm hover:shadow-md cursor-pointer`}
+                  className={`flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl bg-gradient-to-br ${item.gradient} border border-border/30 ${item.border} backdrop-blur-sm transition-all shadow-sm hover:shadow-md cursor-pointer h-20`}
                 >
-                  <span className="text-2xl">{item.emoji}</span>
+                  <span className="text-xl">{item.emoji}</span>
                   <span className="text-[10px] font-black text-foreground uppercase tracking-wider">{item.label}</span>
                 </motion.button>
               ))}
             </motion.div>
 
-            {/* Tier 2: Daily Quests & Enhanced Profile */}
+            {/* Tier 2: Daily Quests & Enhanced Profile details */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <DailyQuestSystem
                 lessonsToday={hasActivityToday ? 1 : 0}
@@ -1352,6 +1573,7 @@ const StudentDashboard = () => {
             <ComeBackBanner hasActivityToday={hasActivityToday} />
           </div>
         )}
+        
 
         {/* ══ Subjects View ══ */}
         {view.screen === "subjects" && (
@@ -1514,16 +1736,19 @@ const StudentDashboard = () => {
       >
         {bottomNavItems.map((item, idx) => {
           const isActive = activeTab === item.id;
+          const curLevel = motivationProgress?.current_level ?? 1;
+          const isTabLocked = (item.id === "adventure" && curLevel < 3) || (item.id === "subjects" && curLevel < 1);
+
           return (
             <motion.button
               key={item.id}
               onClick={() => handleNavClick(item.id)}
-              whileHover={{ scale: 1.08 }}
+              whileHover={{ scale: isTabLocked ? 1.02 : 1.08 }}
               whileTap={{ scale: 0.88 }}
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.4 + idx * 0.06, type: 'spring', stiffness: 300, damping: 18 }}
-              className="flex-1 flex flex-col items-center justify-center py-1.5 px-1 relative transition-colors rounded-xl hover:bg-accent/40 cursor-pointer"
+              className={`flex-1 flex flex-col items-center justify-center py-1.5 px-1 relative transition-all rounded-xl hover:bg-accent/40 cursor-pointer ${isTabLocked ? 'opacity-55' : ''}`}
             >
               {isActive && (
                 <motion.div
@@ -1533,11 +1758,16 @@ const StudentDashboard = () => {
                 />
               )}
               <motion.span
-                className={`text-xl sm:text-2xl z-10 select-none ${isActive ? 'nav-icon-wiggle' : ''}`}
+                className={`text-xl sm:text-2xl z-10 select-none relative ${isActive ? 'nav-icon-wiggle' : ''} ${isTabLocked ? 'filter saturate-50' : ''}`}
                 animate={isActive ? { y: [0, -4, 0], scale: [1, 1.15, 1] } : {}}
                 transition={{ duration: 0.4, ease: [0.34, 1.56, 0.64, 1] }}
               >
                 {item.emoji}
+                {isTabLocked && (
+                  <span className="absolute -top-1.5 -right-1.5 text-[9px] bg-background border border-border rounded-full w-3.5 h-3.5 flex items-center justify-center shadow-md select-none pointer-events-none">
+                    🔒
+                  </span>
+                )}
               </motion.span>
               <span className={`text-[9px] font-black z-10 truncate hidden sm:block mt-0.5 select-none transition-colors ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
                 {item.label}

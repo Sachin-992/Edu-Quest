@@ -24,6 +24,7 @@ interface NMMSQuizPlayerProps {
   subject?: "mathematics" | "science" | "social_science";
   chapter?: string;
   onBack: () => void;
+  customQuestions?: NMMSQuestion[];
 }
 
 export default function NMMSQuizPlayer({
@@ -31,9 +32,10 @@ export default function NMMSQuizPlayer({
   paperType,
   subject,
   chapter,
-  onBack
+  onBack,
+  customQuestions
 }: NMMSQuizPlayerProps) {
-  const { user } = useAuth();
+  const { user, motivationProgress, updateProgress, addXp, addRating } = useAuth();
   const { language } = useLanguageStore();
   const isTamilDefault = language === "ta";
 
@@ -57,6 +59,10 @@ export default function NMMSQuizPlayer({
 
   // Load questions
   useEffect(() => {
+    if (customQuestions && customQuestions.length > 0) {
+      setQuestions(customQuestions);
+      return;
+    }
     let filtered = [...NMMS_STATIC_QUESTIONS];
     if (sessionType === "daily_challenge") {
       // Shuffle and pick 10 mixed questions
@@ -75,7 +81,7 @@ export default function NMMSQuizPlayer({
       filtered.sort(() => 0.5 - Math.random());
       setQuestions(filtered.slice(0, 10)); // Max 10 per practice session
     }
-  }, [sessionType, paperType, subject, chapter]);
+  }, [sessionType, paperType, subject, chapter, customQuestions]);
 
   // Sync default language on mount
   useEffect(() => {
@@ -119,20 +125,17 @@ export default function NMMSQuizPlayer({
     }
 
     try {
-      // Deduct 5 coins from user wallet
-      const { error } = await supabase.from("coin_transactions").insert({
-        user_id: user.id,
-        amount: -5,
-        description: `Unlocked hint for NMMS Question ${activeQuestion.id}`
-      });
-
-      if (error) throw error;
-
+      const curCoins = motivationProgress?.coins ?? 0;
+      if (curCoins < 5) {
+        // Fallback: unlock anyway or notify user
+        setShowHint(true);
+        return;
+      }
+      await updateProgress({ coins: Math.max(0, curCoins - 5) });
       setHintsUsed(prev => [...prev, activeQuestion.id]);
       setShowHint(true);
     } catch (err) {
       console.error("Error using hint:", err);
-      // Fallback: unlock hint anyway to avoid breaking student flow
       setShowHint(true);
     }
   };
@@ -195,14 +198,18 @@ export default function NMMSQuizPlayer({
         xp: calculatedXp
       });
 
-      // 3. Record coins in public.coin_transactions
-      await supabase.from("coin_transactions").insert({
-        user_id: user.id,
-        amount: finalCoins,
-        description: sessionType === "daily_challenge"
-          ? `Completed Daily Mixed NMMS Challenge`
-          : `Completed NMMS Practice: ${chapter}`
-      });
+      // Chess.com-style Elo Rating calculations
+      let ratingDelta = 0;
+      const accuracy = questions.length > 0 ? (score / questions.length) * 100 : 0;
+      if (accuracy === 100) ratingDelta = 25;
+      else if (accuracy >= 80) ratingDelta = 15;
+      else if (accuracy < 50) ratingDelta = -10;
+
+      // 3. Update XP, ELO rating, and Coins in Supabase Motivation System
+      await addXp(calculatedXp);
+      await addRating(ratingDelta);
+      const curCoins = motivationProgress?.coins ?? 0;
+      await updateProgress({ coins: curCoins + finalCoins });
 
       // 4. Update daily completions if daily challenge
       if (sessionType === "daily_challenge") {

@@ -6,7 +6,8 @@ import { onQuizComplete, onActivityComplete } from "@/lib/quizSyncBus";
 import { Button } from "@/components/ui/button";
 import {
   LogOut, Users, Target, BookOpen, HelpCircle,
-  GraduationCap, TrendingUp, LayoutGrid, RefreshCw, Heart, Database,
+  GraduationCap, TrendingUp, LayoutGrid, RefreshCw, Heart, Database, Trophy,
+  Menu, X
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -34,6 +35,7 @@ const EnglishBuddyManager = lazy(() => import("@/components/admin/EnglishBuddyMa
 const TeacherManager = lazy(() => import("@/components/admin/TeacherManager"));
 const ClassAnalytics = lazy(() => import("@/components/admin/ClassAnalytics"));
 const ContentHealthTracker = lazy(() => import("@/components/admin/ContentHealthTracker"));
+const NMMSManager = lazy(() => import("@/components/admin/NMMSManager"));
 
 /* ── Tab loading skeleton ── */
 const TabSkeleton = () => (
@@ -56,7 +58,8 @@ const OverviewSkeleton = () => (
 const AdminDashboard = () => {
   const { role, profile, user, signOut } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
-  const [activeTab, setActiveTab] = useState(role === "teacher" ? "class_analytics" : "students");
+  const [activeTab, setActiveTab] = useState("overview");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [schoolId, setSchoolId] = useState<string>("");
   const tabsRef = useRef<HTMLDivElement>(null);
 
@@ -148,84 +151,222 @@ const AdminDashboard = () => {
     );
   }
 
-  const tabs = role === "teacher"
-    ? [
-        { value: "class_analytics", label: "Class Analytics", icon: TrendingUp },
-        { value: "students", label: "Students", icon: Users },
-        { value: "performance", label: "Performance", icon: Target },
+  // Group navigation tabs into categories
+  const categories = [
+    {
+      id: "core",
+      title: "Core",
+      items: [{ value: "overview", label: "Overview", icon: LayoutGrid }]
+    },
+    {
+      id: "academic",
+      title: "Academic",
+      items: [
+        ...(role !== "teacher" ? [{ value: "subjects", label: "Subjects", icon: LayoutGrid }] : []),
         { value: "lessons", label: "Lessons", icon: BookOpen },
         { value: "quizzes", label: "Quizzes", icon: HelpCircle },
+        ...(role !== "teacher" ? [{ value: "english_buddy", label: "English Buddy", icon: BookOpen }] : []),
+        { value: "nmms", label: "NMMS Prep", icon: Trophy }
       ]
-    : [
+    },
+    {
+      id: "users",
+      title: "Management",
+      items: [
         { value: "students", label: "Students", icon: Users },
-        { value: "teachers", label: "Teachers", icon: Users },
+        ...(role !== "teacher" ? [
+          { value: "teachers", label: "Teachers", icon: Users },
+          { value: "leaderboard", label: "Leaderboard", icon: GraduationCap }
+        ] : [])
+      ]
+    },
+    {
+      id: "insights",
+      title: "Insights",
+      items: [
         { value: "class_analytics", label: "Class Analytics", icon: TrendingUp },
         { value: "performance", label: "Performance", icon: Target },
-        { value: "growth", label: "Growth", icon: TrendingUp },
-        { value: "leaderboard", label: "Leaderboard", icon: GraduationCap },
-        { value: "subjects", label: "Subjects", icon: LayoutGrid },
-        { value: "lessons", label: "Lessons", icon: BookOpen },
-        { value: "quizzes", label: "Quizzes", icon: HelpCircle },
-        { value: "content_health", label: "Content Health", icon: Database },
-        { value: "engagement", label: "Engagement", icon: Heart },
-        { value: "analytics", label: "Analytics", icon: Target },
-        { value: "english_buddy", label: "English Buddy", icon: BookOpen },
-      ];
+        ...(role !== "teacher" ? [
+          { value: "growth", label: "Growth", icon: TrendingUp },
+          { value: "engagement", label: "Engagement", icon: Heart },
+          { value: "analytics", label: "Analytics", icon: Target },
+          { value: "content_health", label: "Content Health", icon: Database }
+        ] : [])
+      ]
+    }
+  ];
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20 overflow-x-hidden">
-      {/* ── Premium Sticky Header ── */}
-      <header className="sticky top-0 z-30 border-b border-border/30 bg-card/70 backdrop-blur-xl supports-[backdrop-filter]:bg-card/60">
-        <div className="w-full flex flex-col md:flex-row md:items-center justify-between px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-24 py-3 md:py-0 md:h-16 gap-3 md:gap-0">
-          
-          {/* Greeting Row (Left on Desktop, Full Width with mobile buttons on Mobile) */}
-          <div className="w-full md:w-auto flex items-center justify-between gap-3.5">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/20 shrink-0">
-                <GraduationCap className="h-5 w-5 text-primary-foreground" />
-              </div>
-              <div className="leading-tight">
-                <h1 className="text-base xl:text-lg font-extrabold text-foreground tracking-tight whitespace-nowrap">
-                  {greeting}, {(() => {
-                    const raw = profile?.full_name || "Admin";
-                    if (!raw.includes("@")) return raw;
-                    const local = raw.split("@")[0];
-                    const name = local.replace(/[0-9_.]+/g, " ").trim().split(" ")[0];
-                    return name.charAt(0).toUpperCase() + name.slice(1);
-                  })()} 👋
-                </h1>
-                <p className="text-[10px] sm:text-xs text-muted-foreground font-medium">
-                  {dateStr}
-                </p>
+  const tabs = categories.flatMap((cat) => cat.items);
+
+  const renderSidebarContent = () => (
+    <div className="flex flex-col h-full justify-between py-6 px-4 select-none">
+      {/* Brand Header */}
+      <div className="space-y-6">
+        <div className="flex items-center gap-3 px-2">
+          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/20 shrink-0">
+            <GraduationCap className="h-4.5 w-4.5 text-primary-foreground" />
+          </div>
+          <div className="leading-tight">
+            <h1 className="text-sm font-black text-foreground tracking-tight whitespace-nowrap">
+              Edu-Quest
+            </h1>
+            <p className="text-[9px] text-muted-foreground font-black uppercase tracking-wider">
+              {role === "teacher" ? "Teacher Portal" : "Admin Panel"}
+            </p>
+          </div>
+        </div>
+
+        {/* Categories & Links */}
+        <div className="space-y-5 overflow-y-auto max-h-[calc(100vh-230px)] pr-1 scrollbar-thin">
+          {categories.map((cat) => (
+            <div key={cat.id} className="space-y-1">
+              <span className="text-[9px] font-black text-muted-foreground/80 uppercase tracking-widest px-2 block">
+                {cat.title}
+              </span>
+              <div className="space-y-0.5">
+                {cat.items.map((tab) => {
+                  const isActive = activeTab === tab.value;
+                  return (
+                    <button
+                      key={tab.value}
+                      onClick={() => {
+                        setActiveTab(tab.value);
+                        setSidebarOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+                        isActive
+                          ? "bg-primary text-primary-foreground shadow-md shadow-primary/10"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                      }`}
+                    >
+                      <tab.icon className="h-4.5 w-4.5 shrink-0" />
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
+          ))}
+        </div>
+      </div>
 
-            {/* Mobile Actions: Refresh & Logout placed in the greeting row on mobile */}
-            <div className="flex md:hidden items-center gap-1.5">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setRefreshKey(k => k + 1)}
-                className="h-8 w-8 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/60"
-                title="Refresh data"
-              >
-                <RefreshCw className="h-3.5 w-3.5" />
-              </Button>
-              <div className="h-4 w-px bg-border/50 mx-0.5" />
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={signOut}
-                className="h-8 w-8 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                title="Sign out"
-              >
-                <LogOut className="h-3.5 w-3.5" />
-              </Button>
+      {/* User Footer */}
+      <div className="border-t border-border/40 pt-4 mt-4 space-y-3">
+        <div className="flex items-center gap-2.5 px-2">
+          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-cyan-500 to-indigo-500 flex items-center justify-center text-xs font-black text-white shrink-0">
+            {profile?.full_name?.charAt(0).toUpperCase() || "A"}
+          </div>
+          <div className="leading-tight min-w-0 flex-1">
+            <p className="text-xs font-extrabold text-foreground truncate">
+              {profile?.full_name || "Admin User"}
+            </p>
+            <p className="text-[9px] text-muted-foreground truncate uppercase font-bold tracking-wider">
+              {role}
+            </p>
+          </div>
+        </div>
+        
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setRefreshKey(k => k + 1)}
+            className="flex-1 rounded-xl h-8 text-[11px] font-bold"
+          >
+            <RefreshCw className="h-3 w-3 mr-1" />
+            Refresh
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={signOut}
+            className="flex-1 rounded-xl h-8 text-[11px] font-bold text-destructive hover:bg-destructive/10 hover:text-destructive"
+          >
+            <LogOut className="h-3 w-3 mr-1" />
+            Logout
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-muted/10 flex text-foreground">
+      {/* 1. Large Screen Docked Sidebar */}
+      <aside className="w-64 border-r border-border/30 bg-card h-screen sticky top-0 hidden lg:flex flex-col shrink-0">
+        {renderSidebarContent()}
+      </aside>
+
+      {/* 2. Mobile Responsive Drawer Sidebar */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-50 flex lg:hidden">
+          <div 
+            className="fixed inset-0 bg-background/80 backdrop-blur-sm"
+            onClick={() => setSidebarOpen(false)}
+          />
+          <aside className="relative w-64 bg-card border-r border-border/30 flex flex-col h-full animate-slide-in-left">
+            <button 
+              onClick={() => setSidebarOpen(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-muted text-muted-foreground"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            {renderSidebarContent()}
+          </aside>
+        </div>
+      )}
+
+      {/* 3. Main Dashboard Frame */}
+      <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden">
+        
+        {/* Mobile Header Bar */}
+        <header className="sticky top-0 z-30 border-b border-border/30 bg-card/75 backdrop-blur-xl py-3 px-4 flex items-center justify-between lg:hidden">
+          <button 
+            onClick={() => setSidebarOpen(true)}
+            className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          
+          <span className="font-extrabold text-sm tracking-tight">Edu-Quest Portal</span>
+          
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setRefreshKey(k => k + 1)}
+            className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+          </Button>
+        </header>
+
+        {/* Page Main Content Area */}
+        <main className="w-full flex-1 p-4 sm:p-6 md:p-8 lg:p-10 space-y-6">
+          
+          {/* Header Row on Large Screens */}
+          <div className="hidden lg:flex items-center justify-between border-b border-border/20 pb-4">
+            <div>
+              <h2 className="text-xl font-extrabold tracking-tight">
+                {tabs.find(t => t.value === activeTab)?.label || "Dashboard"}
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5 font-medium">
+                {greeting}, {profile?.full_name?.split(" ")[0] || "Admin"} · {dateStr}
+              </p>
+            </div>
+            
+            {/* QuickActionsBar */}
+            <div className="flex items-center gap-3">
+              <QuickActionsBar
+                schoolId={schoolId}
+                onStudentAdded={() => setRefreshKey(k => k + 1)}
+                onNavigate={handleNavigate}
+                isTeacher={role === "teacher"}
+              />
             </div>
           </div>
 
-          {/* QuickActionsBar Row (Middle on Desktop, 2nd Row horizontally scrollable on Mobile) */}
-          <div className="w-full md:flex-1 flex justify-start md:justify-end md:mr-4 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+          {/* Quick Actions Row on Mobile Header */}
+          <div className="flex lg:hidden bg-card/50 border border-border/30 p-2.5 rounded-2xl overflow-x-auto pb-1 scrollbar-none">
             <QuickActionsBar
               schoolId={schoolId}
               onStudentAdded={() => setRefreshKey(k => k + 1)}
@@ -234,102 +375,68 @@ const AdminDashboard = () => {
             />
           </div>
 
-          {/* Desktop Actions: Refresh & Logout (Hidden on Mobile) */}
-          <div className="hidden md:flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setRefreshKey(k => k + 1)}
-              className="h-9 w-9 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/60"
-              title="Refresh data"
-            >
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-            <div className="h-5 w-px bg-border/50 mx-1" />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={signOut}
-              className="h-9 w-9 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-              title="Sign out"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
+          {/* Tabs Container */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-0">
+            {/* Managed by the Sidebar button triggers */}
+            <TabsList className="hidden">
+              {tabs.map((tab) => (
+                <TabsTrigger key={tab.value} value={tab.value}>{tab.label}</TabsTrigger>
+              ))}
+            </TabsList>
 
-        </div>
-      </header>
+            {/* ══ Overview Tab Content (Metrics + Grid overview) ══ */}
+            <TabsContent value="overview" className="mt-0 space-y-6 outline-none">
+              {/* Stats above the fold */}
+              <SectionErrorBoundary fallbackTitle="Stats failed to load">
+                <HeroStatCards
+                  key={refreshKey}
+                  onCardClick={handleNavigate}
+                  isTeacher={role === "teacher"}
+                  assignedClasses={assignedClasses}
+                  assignedSubjects={assignedSubjects}
+                  assignments={assignments}
+                />
+              </SectionErrorBoundary>
 
-      <main className="w-full px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-24 py-6 md:py-8 lg:py-10 space-y-6 lg:space-y-8">
-        {/* ── Hero Stat Cards — loads FIRST (critical above-the-fold) ── */}
-        <SectionErrorBoundary fallbackTitle="Stats failed to load">
-          <HeroStatCards
-            key={refreshKey}
-            onCardClick={handleNavigate}
-            isTeacher={role === "teacher"}
-            assignedClasses={assignedClasses}
-            assignedSubjects={assignedSubjects}
-            assignments={assignments}
-          />
-        </SectionErrorBoundary>
+              {/* Three card columns */}
+              <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 lg:gap-6">
+                <SectionErrorBoundary fallbackTitle="Class overview failed">
+                  <Suspense fallback={<OverviewSkeleton />}>
+                    <ClassOverview
+                      isTeacher={role === "teacher"}
+                      assignedClasses={assignedClasses}
+                      assignedSubjects={assignedSubjects}
+                      assignments={assignments}
+                    />
+                  </Suspense>
+                </SectionErrorBoundary>
+                <SectionErrorBoundary fallbackTitle="Activity feed failed">
+                  <Suspense fallback={<OverviewSkeleton />}>
+                    <RecentActivityFeed
+                      isTeacher={role === "teacher"}
+                      assignedClasses={assignedClasses}
+                      assignedSubjects={assignedSubjects}
+                      assignments={assignments}
+                    />
+                  </Suspense>
+                </SectionErrorBoundary>
+                <SectionErrorBoundary fallbackTitle="Engagement insights failed">
+                  <Suspense fallback={<OverviewSkeleton />}>
+                    <EngagementInsights
+                      onNavigate={handleNavigate}
+                      isTeacher={role === "teacher"}
+                      assignedClasses={assignedClasses}
+                      assignedSubjects={assignedSubjects}
+                      assignments={assignments}
+                    />
+                  </Suspense>
+                </SectionErrorBoundary>
+              </section>
+            </TabsContent>
 
-        {/* ── Overview Row — DEFERRED (lazy-loaded, renders after hero stats) ── */}
-        <section className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5 lg:gap-6 xl:gap-8">
-          <SectionErrorBoundary fallbackTitle="Class overview failed">
-            <Suspense fallback={<OverviewSkeleton />}>
-              <ClassOverview
-                isTeacher={role === "teacher"}
-                assignedClasses={assignedClasses}
-                assignedSubjects={assignedSubjects}
-                assignments={assignments}
-              />
-            </Suspense>
-          </SectionErrorBoundary>
-          <SectionErrorBoundary fallbackTitle="Activity feed failed">
-            <Suspense fallback={<OverviewSkeleton />}>
-              <RecentActivityFeed
-                isTeacher={role === "teacher"}
-                assignedClasses={assignedClasses}
-                assignedSubjects={assignedSubjects}
-                assignments={assignments}
-              />
-            </Suspense>
-          </SectionErrorBoundary>
-          <SectionErrorBoundary fallbackTitle="Engagement insights failed">
-            <Suspense fallback={<OverviewSkeleton />}>
-              <EngagementInsights
-                onNavigate={handleNavigate}
-                isTeacher={role === "teacher"}
-                assignedClasses={assignedClasses}
-                assignedSubjects={assignedSubjects}
-                assignments={assignments}
-              />
-            </Suspense>
-          </SectionErrorBoundary>
-        </section>
-
-
-
-        {/* ── Management Tabs — LAZY-LOADED per tab ── */}
-        <div ref={tabsRef}>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-5">
-            <div className="overflow-x-auto pb-1.5 -mx-5 px-5 md:mx-0 md:px-0">
-              <TabsList className="min-w-full w-max flex h-12 bg-card/80 backdrop-blur-sm border border-border/40 rounded-2xl p-1 gap-1 shadow-sm">
-                {tabs.map((tab) => (
-                  <TabsTrigger
-                    key={tab.value}
-                    value={tab.value}
-                    className="flex-1 shrink-0 rounded-xl px-3 py-2.5 xl:px-5 xl:py-3 text-sm xl:text-base font-semibold text-muted-foreground gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-primary/90 data-[state=active]:text-primary-foreground data-[state=active]:shadow-md data-[state=active]:shadow-primary/20 hover:text-foreground transition-all duration-200 whitespace-nowrap"
-                  >
-                    <tab.icon className="h-4 w-4" />
-                    <span className="hidden sm:inline">{tab.label}</span>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </div>
-
-            <div className="bg-card/80 backdrop-blur-sm border border-border/40 rounded-2xl p-5 md:p-7 shadow-sm min-h-[420px]">
-              <TabsContent value="students" className="mt-0 animate-fade-in">
+            {/* Other Tabs content */}
+            <div className={`${activeTab === "overview" ? "hidden" : "bg-card border border-border/30 rounded-2xl p-5 md:p-7 shadow-sm mt-0 min-h-[420px]"}`}>
+              <TabsContent value="students" className="mt-0 animate-fade-in outline-none">
                 <SectionErrorBoundary fallbackTitle="Student list failed">
                   <Suspense fallback={<TabSkeleton />}>
                     <StudentList
@@ -342,7 +449,7 @@ const AdminDashboard = () => {
                   </Suspense>
                 </SectionErrorBoundary>
               </TabsContent>
-              <TabsContent value="performance" className="mt-0 animate-fade-in">
+              <TabsContent value="performance" className="mt-0 animate-fade-in outline-none">
                 <SectionErrorBoundary fallbackTitle="Performance data failed">
                   <Suspense fallback={<TabSkeleton />}>
                     <ClassPerformance
@@ -354,35 +461,35 @@ const AdminDashboard = () => {
                   </Suspense>
                 </SectionErrorBoundary>
               </TabsContent>
-              <TabsContent value="growth" className="mt-0 animate-fade-in">
+              <TabsContent value="growth" className="mt-0 animate-fade-in outline-none">
                 <SectionErrorBoundary fallbackTitle="Growth tracker failed">
                   <Suspense fallback={<TabSkeleton />}>
                     <StudentGrowthTracker />
                   </Suspense>
                 </SectionErrorBoundary>
               </TabsContent>
-              <TabsContent value="content_health" className="mt-0 animate-fade-in">
+              <TabsContent value="content_health" className="mt-0 animate-fade-in outline-none">
                 <SectionErrorBoundary fallbackTitle="Content health tracker failed">
                   <Suspense fallback={<TabSkeleton />}>
                     <ContentHealthTracker />
                   </Suspense>
                 </SectionErrorBoundary>
               </TabsContent>
-              <TabsContent value="leaderboard" className="mt-0 animate-fade-in">
+              <TabsContent value="leaderboard" className="mt-0 animate-fade-in outline-none">
                 <SectionErrorBoundary fallbackTitle="Leaderboard failed">
                   <Suspense fallback={<TabSkeleton />}>
                     <LeaderboardControls />
                   </Suspense>
                 </SectionErrorBoundary>
               </TabsContent>
-              <TabsContent value="subjects" className="mt-0 animate-fade-in">
+              <TabsContent value="subjects" className="mt-0 animate-fade-in outline-none">
                 <SectionErrorBoundary fallbackTitle="Subject manager failed">
                   <Suspense fallback={<TabSkeleton />}>
                     <SubjectManager />
                   </Suspense>
                 </SectionErrorBoundary>
               </TabsContent>
-              <TabsContent value="lessons" className="mt-0 animate-fade-in">
+              <TabsContent value="lessons" className="mt-0 animate-fade-in outline-none">
                 <SectionErrorBoundary fallbackTitle="Lesson manager failed">
                   <Suspense fallback={<TabSkeleton />}>
                     <LessonManager
@@ -394,7 +501,7 @@ const AdminDashboard = () => {
                   </Suspense>
                 </SectionErrorBoundary>
               </TabsContent>
-              <TabsContent value="quizzes" className="mt-0 animate-fade-in">
+              <TabsContent value="quizzes" className="mt-0 animate-fade-in outline-none">
                 <SectionErrorBoundary fallbackTitle="Quiz manager failed">
                   <Suspense fallback={<TabSkeleton />}>
                     <QuizManager
@@ -406,35 +513,42 @@ const AdminDashboard = () => {
                   </Suspense>
                 </SectionErrorBoundary>
               </TabsContent>
-              <TabsContent value="engagement" className="mt-0 animate-fade-in">
+              <TabsContent value="engagement" className="mt-0 animate-fade-in outline-none">
                 <SectionErrorBoundary fallbackTitle="Engagement analytics failed">
                   <Suspense fallback={<TabSkeleton />}>
                     <EngagementDashboard />
                   </Suspense>
                 </SectionErrorBoundary>
               </TabsContent>
-              <TabsContent value="analytics" className="mt-0 animate-fade-in">
+              <TabsContent value="analytics" className="mt-0 animate-fade-in outline-none">
                 <SectionErrorBoundary fallbackTitle="Analytics failed">
                   <Suspense fallback={<TabSkeleton />}>
                     <SchoolAnalytics />
                   </Suspense>
                 </SectionErrorBoundary>
               </TabsContent>
-              <TabsContent value="english_buddy" className="mt-0 animate-fade-in">
+              <TabsContent value="english_buddy" className="mt-0 animate-fade-in outline-none">
                 <SectionErrorBoundary fallbackTitle="English Buddy manager failed">
                   <Suspense fallback={<TabSkeleton />}>
                     <EnglishBuddyManager />
                   </Suspense>
                 </SectionErrorBoundary>
               </TabsContent>
-              <TabsContent value="teachers" className="mt-0 animate-fade-in">
+              <TabsContent value="nmms" className="mt-0 animate-fade-in outline-none">
+                <SectionErrorBoundary fallbackTitle="NMMS manager failed">
+                  <Suspense fallback={<TabSkeleton />}>
+                    <NMMSManager />
+                  </Suspense>
+                </SectionErrorBoundary>
+              </TabsContent>
+              <TabsContent value="teachers" className="mt-0 animate-fade-in outline-none">
                 <SectionErrorBoundary fallbackTitle="Teacher manager failed">
                   <Suspense fallback={<TabSkeleton />}>
                     <TeacherManager schoolId={schoolId} />
                   </Suspense>
                 </SectionErrorBoundary>
               </TabsContent>
-              <TabsContent value="class_analytics" className="mt-0 animate-fade-in">
+              <TabsContent value="class_analytics" className="mt-0 animate-fade-in outline-none">
                 <SectionErrorBoundary fallbackTitle="Class analytics failed">
                   <Suspense fallback={<TabSkeleton />}>
                     <ClassAnalytics
@@ -448,8 +562,8 @@ const AdminDashboard = () => {
               </TabsContent>
             </div>
           </Tabs>
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 };

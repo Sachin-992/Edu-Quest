@@ -76,11 +76,11 @@ const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const TAMIL_DAY_LABELS = ['திங்கள்', 'செவ்வாய்', 'புதன்', 'வியாழன்', 'வெள்ளி', 'சனி', 'ஞாயிறு'];
 
 const StreakFreezeShop = ({ streakDays, onClose }: StreakFreezeShopProps) => {
-  const { user } = useAuth();
+  const { user, motivationProgress, updateProgress } = useAuth();
   const { language } = useLanguageStore();
   const isTamil = language === 'ta';
-  const [gems, setGemsState] = useState(getGems);
   const [freezes, setFreezesState] = useState(getFreezes);
+  const gems = motivationProgress?.gems ?? 0;
   const [purchasing, setPurchasing] = useState(false);
   const [justBought, setJustBought] = useState(false);
   const [calendar] = useState(getStreakCalendar);
@@ -95,32 +95,11 @@ const StreakFreezeShop = ({ streakDays, onClose }: StreakFreezeShopProps) => {
     setPurchasing(true);
 
     try {
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("avatar_url")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      let parsed: any = {};
-      if (prof?.avatar_url) {
-        try {
-          parsed = JSON.parse(prof.avatar_url);
-        } catch (e) {}
-      }
-
-      parsed.gems_spent = (parsed.gems_spent || 0) + FREEZE_COST;
-
-      await supabase
-        .from("profiles")
-        .update({ avatar_url: JSON.stringify(parsed) })
-        .eq("user_id", user.id);
-
       const newGems = gems - FREEZE_COST;
       const newFreezes = freezes + 1;
-      setGems(newGems);
       setFreezes(newFreezes);
-      setGemsState(newGems);
       setFreezesState(newFreezes);
+      await updateProgress({ gems: newGems });
       setJustBought(true);
       setTimeout(() => setJustBought(false), 2000);
     } catch (err) {
@@ -130,10 +109,9 @@ const StreakFreezeShop = ({ streakDays, onClose }: StreakFreezeShopProps) => {
     }
   };
 
-  // Re-sync from localStorage periodically
+  // Re-sync freezes from localStorage periodically
   useEffect(() => {
     const interval = setInterval(() => {
-      setGemsState(getGems());
       setFreezesState(getFreezes());
     }, 3000);
     return () => clearInterval(interval);

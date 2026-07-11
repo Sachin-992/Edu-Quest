@@ -308,11 +308,33 @@ serve(async (req) => {
     }
 
     /* ══════════════════ STEP 8: Build AI Prompt ══════════════════ */
+    const classLevelNum = class_level ? Number(class_level) : 5;
     const classInfo = class_level
-      ? `for Class ${class_level} students (age ~${Number(class_level) + 5} years)`
+      ? `for Class ${class_level} students (age ~${classLevelNum + 5} years)`
       : "for primary school students";
 
-    const systemPrompt = "You are an expert educational quiz creator for Indian school students. Generate quiz questions and return them as structured JSON only. No markdown, no code fences, no commentary.";
+    // Dynamic, grade-level academic complexity guidelines supporting all subjects (Math, Science, Social Science, Language, etc.)
+    let ageAppropriateInstructions = "";
+    if (classLevelNum >= 6 && classLevelNum <= 8) {
+      ageAppropriateInstructions = `
+CRITICAL FOR MIDDLE SCHOOL (GRADES 6-8):
+- Do NOT generate simple arithmetic, childish spelling, or trivial recall questions (e.g., "what is 2 + 2" or simple word matching).
+- Questions MUST test intermediate concept comprehension, application, and mathematical/conceptual reasoning suitable for CBSE/State Board middle school curriculum.
+- For Math/Science: Include multi-step problem solving, algebra formulas, physics/chemistry properties, and logical deduction.
+- For Language/Social Studies: Focus on grammar syntax, context analysis, historical timelines, and geographical relationships.`;
+    } else if (classLevelNum >= 9) {
+      ageAppropriateInstructions = `
+CRITICAL FOR HIGH SCHOOL (GRADES 9-12):
+- Questions MUST be intellectually challenging and conceptually rich. Absolutely no basic definitions or trivial facts.
+- Math/Science questions must involve formulas, equations, rigorous chemical or physical principles, or proof-oriented logic.
+- Social Studies/Language questions should require analysis of causes and effects, critical literary terms, or complex comprehension.`;
+    } else {
+      ageAppropriateInstructions = `
+CRITICAL FOR PRIMARY SCHOOL (GRADES 1-5):
+- Questions should focus on core conceptual recall, basic arithmetic, elementary science, and vocabulary suited for younger learners (age-appropriate context).`;
+    }
+
+    const systemPrompt = "You are an expert academic curriculum developer and quiz creator for Indian school students. Your task is to generate challenging, high-quality, syllabus-aligned questions that test students' conceptual depth across subjects (Mathematics, Tamil, English, Science, Social Science). Return structured JSON only. No markdown, no code fences, no commentary.";
 
     const userPrompt = `Generate quiz questions based on this lesson content.
 
@@ -326,10 +348,14 @@ Generate exactly:
 - ${num_true_false} True/False questions
 - ${num_fill_blank} Fill in the Blank questions
 
-Requirements:
-- Questions should be appropriate ${classInfo}
-- Include a mix of easy, medium, and hard difficulty
-- Each question must have a clear, unambiguous correct answer
+Grade Level Alignment:
+- Target: ${classInfo}
+${ageAppropriateInstructions}
+
+General Requirements:
+- Questions must strictly align with the grade level cognitive requirements.
+- Include a mix of easy, medium, and hard difficulty (relative to the target grade level).
+- Each question must have a clear, unambiguous correct answer.
 - For MCQ: provide exactly 4 options. Crucial: Make sure the correct answer is placed at a random position (option A, B, C, or D) for each question. Do NOT always place the correct answer as the first option!
 - For True/False: options are ["True", "False"]
 - For Fill in Blank: the blank should be indicated with _____ in the question

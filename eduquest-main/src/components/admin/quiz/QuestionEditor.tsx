@@ -11,7 +11,7 @@ import {
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface QuizQuestion {
@@ -45,6 +45,11 @@ const QuestionEditor = ({ quizId, quizTitle, questions, onQuestionsChanged }: Qu
         explanation_tamil: "", question_order: "0", points: "10",
     });
 
+    // Bulk Import States
+    const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+    const [bulkInput, setBulkInput] = useState("");
+    const [importing, setImporting] = useState(false);
+
     const resetForm = () => {
         setEditingQ(null);
         setForm({
@@ -52,6 +57,121 @@ const QuestionEditor = ({ quizId, quizTitle, questions, onQuestionsChanged }: Qu
             options: ["", "", "", ""], correct_answer: "", explanation: "",
             explanation_tamil: "", question_order: "0", points: "10",
         });
+    };
+
+    const parseCSVLine = (line: string): string[] => {
+        const result = [];
+        let current = "";
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            if (char === '"') {
+                inQuotes = !inQuotes;
+            } else if (char === ',' && !inQuotes) {
+                result.push(current.trim());
+                current = "";
+            } else {
+                current += char;
+            }
+        }
+        result.push(current.trim());
+        return result.map(s => s.startsWith('"') && s.endsWith('"') ? s.slice(1, -1) : s);
+    };
+
+    const handleBulkImport = async () => {
+        if (!bulkInput.trim()) {
+            toast({ title: "Please enter some data", variant: "destructive" });
+            return;
+        }
+        setImporting(true);
+        try {
+            let parsedQuestions: any[] = [];
+            const text = bulkInput.trim();
+
+            if (text.startsWith("[")) {
+                // JSON Import
+                const parsed = JSON.parse(text);
+                if (!Array.isArray(parsed)) {
+                    throw new Error("JSON must be an array of question objects");
+                }
+                parsedQuestions = parsed;
+            } else {
+                // CSV Import
+                const lines = text.split(/\r?\n/).filter(line => line.trim());
+                if (lines.length < 2) {
+                    throw new Error("CSV must include a header row and at least one data row");
+                }
+                const headers = parseCSVLine(lines[0]);
+                
+                for (let i = 1; i < lines.length; i++) {
+                    const rowValues = parseCSVLine(lines[i]);
+                    const row: Record<string, string> = {};
+                    headers.forEach((header, index) => {
+                        row[header.toLowerCase().trim()] = rowValues[index] || "";
+                    });
+                    
+                    const question_text = row.question_text || row.question || "";
+                    if (!question_text) continue;
+
+                    let options: string[] = [];
+                    if (row.options) {
+                        options = row.options.split(";").map(o => o.trim()).filter(Boolean);
+                    } else {
+                        const optA = row.option_a || row.a || "";
+                        const optB = row.option_b || row.b || "";
+                        const optC = row.option_c || row.c || "";
+                        const optD = row.option_d || row.d || "";
+                        options = [optA, optB, optC, optD].map(o => o.trim()).filter(Boolean);
+                    }
+
+                    parsedQuestions.push({
+                        question_text,
+                        question_text_tamil: row.question_text_tamil || row.question_tamil || null,
+                        question_type: row.question_type || row.type || "mcq",
+                        options,
+                        correct_answer: row.correct_answer || row.answer || "",
+                        explanation: row.explanation || null,
+                        explanation_tamil: row.explanation_tamil || null,
+                        question_order: parseInt(row.question_order || row.order || String(i)),
+                        points: parseInt(row.points || "10")
+                    });
+                }
+            }
+
+            if (parsedQuestions.length === 0) {
+                throw new Error("No questions successfully parsed.");
+            }
+
+            const rowsToInsert = parsedQuestions.map(q => ({
+                quiz_id: quizId,
+                question_text: q.question_text,
+                question_text_tamil: q.question_text_tamil || null,
+                question_type: q.question_type || "mcq",
+                options: q.options,
+                correct_answer: q.correct_answer,
+                explanation: q.explanation || null,
+                explanation_tamil: q.explanation_tamil || null,
+                question_order: Number(q.question_order) || 0,
+                points: Number(q.points) || 10
+            }));
+
+            const { error } = await supabase.from("quiz_questions").insert(rowsToInsert);
+            if (error) throw error;
+
+            toast({ title: `Successfully imported ${rowsToInsert.length} questions! 🚀` });
+            setBulkDialogOpen(false);
+            setBulkInput("");
+            onQuestionsChanged();
+        } catch (err: any) {
+            console.error("Bulk Import Error:", err);
+            toast({
+                title: "Import failed",
+                description: err.message || "An unexpected parsing error occurred.",
+                variant: "destructive"
+            });
+        } finally {
+            setImporting(false);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -89,8 +209,48 @@ const QuestionEditor = ({ quizId, quizTitle, questions, onQuestionsChanged }: Qu
         <div className="bg-card rounded-2xl shadow-card p-4">
             <div className="flex items-center justify-between mb-3">
                 <h3 className="font-bold">Questions — {quizTitle}</h3>
-                <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
-                    <DialogTrigger asChild><Button size="sm"><Plus className="w-4 h-4 mr-1" /> Add Question</Button></DialogTrigger>
+                <div className="flex gap-2">
+                    {/* Bulk Import Dialog */}
+                    <Dialog open={bulkDialogOpen} onOpenChange={setBulkDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button size="sm" variant="outline">
+                                <Upload className="w-4 h-4 mr-1" /> Bulk Import
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-xl">
+                            <DialogHeader>
+                                <DialogTitle>Bulk Import Questions</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4 mt-2 text-left">
+                                <p className="text-xs text-muted-foreground">
+                                    Paste questions in <strong>JSON</strong> format (array of objects) or <strong>CSV</strong> format (comma-separated with headers).
+                                </p>
+                                
+                                <div className="space-y-1 bg-muted/60 p-2.5 rounded-lg text-[10px] font-mono leading-relaxed max-h-36 overflow-y-auto border">
+                                    <span className="font-black text-foreground uppercase block text-[9px] mb-1">CSV Template headers:</span>
+                                    question_text, question_text_tamil, question_type, option_a, option_b, option_c, option_d, correct_answer, explanation, points
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label>Paste Data (JSON or CSV)</Label>
+                                    <Textarea 
+                                        placeholder={`[{"question_text": "What is 10 + 10?", "options": ["10", "20", "30", "40"], "correct_answer": "20", "points": 10}]`}
+                                        value={bulkInput}
+                                        onChange={(e) => setBulkInput(e.target.value)}
+                                        rows={8}
+                                        className="font-mono text-xs"
+                                    />
+                                </div>
+                                <Button onClick={handleBulkImport} className="w-full animate-glow" disabled={importing}>
+                                    {importing ? "Importing..." : "Start Import"}
+                                </Button>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+
+                    {/* Manual Add Question */}
+                    <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
+                        <DialogTrigger asChild><Button size="sm"><Plus className="w-4 h-4 mr-1" /> Add Question</Button></DialogTrigger>
                     <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader><DialogTitle>{editingQ ? "Edit" : "Add"} Question</DialogTitle></DialogHeader>
                         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
@@ -116,6 +276,7 @@ const QuestionEditor = ({ quizId, quizTitle, questions, onQuestionsChanged }: Qu
                         </form>
                     </DialogContent>
                 </Dialog>
+                </div>
             </div>
             {questions.length === 0 ? (
                 <p className="text-muted-foreground text-sm text-center py-4">No questions yet</p>

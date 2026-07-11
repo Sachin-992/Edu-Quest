@@ -495,33 +495,86 @@ const EnhancedLeaderboard = ({ onRefresh }: EnhancedLeaderboardProps) => {
         </motion.div>
       )}
 
-      {/* Weekly Leaderboard Reward Info Card */}
-      <div className="mb-6 p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-yellow-500/5 to-purple-500/10 border border-amber-500/20 text-left">
-        <div className="flex items-center gap-2 mb-2">
-          <Trophy className="w-4 h-4 text-amber-400 animate-pulse" />
-          <span className="text-xs font-black text-amber-400 uppercase tracking-wider">{isTamil ? "வாராந்திர முதல் 3 வகுப்பு வெகுமதிகள்" : "Weekly Top 3 Class Rewards"}</span>
-        </div>
-        <p className="text-[11px] text-muted-foreground mb-3 leading-snug">
-          {isTamil 
-            ? `ஞாயிற்றுக்கிழமை இரவுக்குள் வகுப்பு ${classLevel}-ல் முதல் 3 இடங்களைப் பிடித்து, இந்த பெரிய போனஸைப் பெறுங்கள்!` 
-            : `Study hard and rank in the top 3 of class ${classLevel} by Sunday night to claim these massive bonuses!`}
-        </p>
-        <div className="grid grid-cols-3 gap-2">
-          <div className="flex flex-col items-center p-2 rounded-xl bg-slate-950/40 border border-yellow-500/20">
-            <span className="text-lg">🥇</span>
-            <span className="text-[10px] font-black text-foreground mt-1">{isTamil ? "தரம் 1" : "Rank 1"}</span>
-            <span className="text-[10px] text-amber-400 font-bold mt-0.5">🪙 500 / 💎 30</span>
+      {/* Weekly Leaderboard Reward Info & Guide Card */}
+      <div className="mb-6 p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-yellow-500/5 to-purple-500/10 border border-amber-500/20 text-left shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+          
+          {/* Guide Column */}
+          <div className="md:col-span-7 space-y-2">
+            <div className="flex items-center gap-2">
+              <Trophy className="w-4.5 h-4.5 text-yellow-500 animate-bounce" />
+              <span className="text-xs font-black text-amber-500 dark:text-amber-400 uppercase tracking-widest">
+                {isTamil ? "வாராந்திர லீக் வழிகாட்டி" : "Weekly League Guide"}
+              </span>
+            </div>
+            
+            <p className="text-[11px] text-muted-foreground leading-normal">
+              {isTamil 
+                ? `வகுப்பு ${classLevel} தலைவர் பலகையில் அதிக XP பெற்று முதலிடம் பெறுங்கள்! வாராந்திர தரவரிசைகள் ஞாயிறு நள்ளிரவில் பூட்டப்படும்.` 
+                : `Earn XP by completing lessons, daily quests, and games to rank up! Rankings lock every Sunday at midnight.`}
+            </p>
+
+            {/* Micro-instructions */}
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-bold">
+                <span className="text-xs">⚡</span>
+                <span>{isTamil ? "பாடங்கள்: +25 XP" : "Lessons: +25 XP"}</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-bold">
+                <span className="text-xs">🎯</span>
+                <span>{isTamil ? "புதிர்கள்: +50 XP" : "Quizzes: +50 XP"}</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-bold">
+                <span className="text-xs">🎮</span>
+                <span>{isTamil ? "விளையாட்டு: +10 XP" : "Games: +10 XP"}</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-bold">
+                <span className="text-xs">⏰</span>
+                <span>{isTamil ? "ஞாயிறு அன்று ரீசெட்" : "Resets Sunday"}</span>
+              </div>
+            </div>
           </div>
-          <div className="flex flex-col items-center p-2 rounded-xl bg-slate-950/40 border border-gray-400/20">
-            <span className="text-lg">🥈</span>
-            <span className="text-[10px] font-black text-foreground mt-1">{isTamil ? "தரம் 2" : "Rank 2"}</span>
-            <span className="text-[10px] text-gray-300 font-bold mt-0.5">🪙 300 / 💎 15</span>
+
+          {/* Podiums Column */}
+          <div className="md:col-span-5 space-y-2">
+            <div className="text-[9px] font-black uppercase text-amber-500 dark:text-amber-400 tracking-wider text-center md:text-left">
+              {isTamil ? "வெற்றியாளர் பரிசுகள்" : "TOP 3 WEEKLY PRIZES"}
+            </div>
+            
+            <div className="grid grid-cols-3 gap-1.5">
+              {/* Rank 2 (Silver) */}
+              <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-gradient-to-b from-slate-400/20 via-slate-400/5 to-transparent border-2 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 shadow-[0_4px_10px_rgba(148,163,184,0.05)] text-center h-24">
+                <span className="text-xl">🥈</span>
+                <span className="text-[9px] font-black mt-1 leading-none">{isTamil ? "தரம் 2" : "Rank 2"}</span>
+                <div className="flex flex-col items-center mt-1.5 leading-none">
+                  <span className="text-[8px] font-black text-amber-600 dark:text-amber-500">🪙300</span>
+                  <span className="text-[8px] font-black text-cyan-600 dark:text-cyan-400 mt-0.5">💎15</span>
+                </div>
+              </div>
+
+              {/* Rank 1 (Gold) */}
+              <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-gradient-to-b from-yellow-500/20 via-yellow-500/5 to-transparent border-2 border-yellow-400 dark:border-yellow-600 text-yellow-700 dark:text-yellow-400 shadow-[0_4px_14px_rgba(234,179,8,0.15)] text-center h-24 -translate-y-1">
+                <span className="text-2xl animate-pulse">🥇</span>
+                <span className="text-[9px] font-black mt-1 leading-none">{isTamil ? "தரம் 1" : "Rank 1"}</span>
+                <div className="flex flex-col items-center mt-1.5 leading-none">
+                  <span className="text-[8px] font-black text-amber-600 dark:text-amber-500">🪙500</span>
+                  <span className="text-[8px] font-black text-cyan-600 dark:text-cyan-400 mt-0.5">💎30</span>
+                </div>
+              </div>
+
+              {/* Rank 3 (Bronze) */}
+              <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-gradient-to-b from-amber-700/20 via-amber-700/5 to-transparent border-2 border-amber-600 dark:border-amber-800 text-amber-800 dark:text-amber-500 shadow-[0_4px_10px_rgba(180,83,9,0.05)] text-center h-24">
+                <span className="text-xl">🥉</span>
+                <span className="text-[9px] font-black mt-1 leading-none">{isTamil ? "தரம் 3" : "Rank 3"}</span>
+                <div className="flex flex-col items-center mt-1.5 leading-none">
+                  <span className="text-[8px] font-black text-amber-600 dark:text-amber-500">🪙150</span>
+                  <span className="text-[8px] font-black text-cyan-600 dark:text-cyan-400 mt-0.5">💎10</span>
+                </div>
+              </div>
+            </div>
+
           </div>
-          <div className="flex flex-col items-center p-2 rounded-xl bg-slate-950/40 border border-amber-600/20">
-            <span className="text-lg">🥉</span>
-            <span className="text-[10px] font-black text-foreground mt-1">{isTamil ? "தரம் 3" : "Rank 3"}</span>
-            <span className="text-[10px] text-amber-500 font-bold mt-0.5">🪙 150 / 💎 10</span>
-          </div>
+
         </div>
       </div>
 

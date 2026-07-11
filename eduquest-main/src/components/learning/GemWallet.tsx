@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Gem, Coins, Snowflake, Sparkles, ChevronDown, X, Gift, Star } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useLanguageStore } from '@/store/useLanguageStore';
 
 /* ═══════════════════════════════════════════════════
@@ -11,14 +12,6 @@ interface GemWalletProps {
   className?: string;
 }
 
-function getGems(): number {
-  return parseInt(localStorage.getItem('eq_gems') || '10', 10);
-}
-
-function getCoins(): number {
-  return parseInt(localStorage.getItem('eq_coins') || '0', 10);
-}
-
 function getFreezes(): number {
   return parseInt(localStorage.getItem('eq_streak_freezes') || '0', 10);
 }
@@ -27,18 +20,17 @@ function getFreezes(): number {
 
 const GemWallet = ({ className = '' }: GemWalletProps) => {
   const { language } = useLanguageStore();
+  const { motivationProgress } = useAuth();
   const isTamil = language === 'ta';
   const [expanded, setExpanded] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
 
-  const [gems, setGems] = useState(getGems());
-  const [coins, setCoins] = useState(getCoins());
+  const gems = motivationProgress?.gems ?? 0;
+  const coins = motivationProgress?.coins ?? 0;
   const [freezes, setFreezes] = useState(getFreezes());
 
   useEffect(() => {
     const handleUpdate = () => {
-      setGems(getGems());
-      setCoins(getCoins());
       setFreezes(getFreezes());
     };
     window.addEventListener('storage', handleUpdate);

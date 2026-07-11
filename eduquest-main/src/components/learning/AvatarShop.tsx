@@ -120,7 +120,7 @@ const applySlotToConfig = (config: CharacterConfig, slot: string, itemId: string
 };
 
 export default function AvatarShop({ onBack, onConfigChange }: AvatarShopProps) {
-  const { user } = useAuth();
+  const { user, motivationProgress, updateProgress } = useAuth();
   const { toast } = useToast();
   const { language } = useLanguageStore();
   const isTamil = language === "ta";
@@ -158,14 +158,12 @@ export default function AvatarShop({ onBack, onConfigChange }: AvatarShopProps) 
   const [openingCrate, setOpeningCrate] = useState(false);
   const [revealedCrateItem, setRevealedCrateItem] = useState<Cosmetic | null>(null);
 
-  // Fetch initial user progress, economy balance, and customization configurations
+  // Fetch initial user progress, owned inventory, and customization configurations
   const loadShopData = async () => {
     if (!user) return;
     try {
-      const [ownedRes, progressRes, transactionsRes, profileRes] = await Promise.all([
+      const [ownedRes, profileRes] = await Promise.all([
         supabase.from("student_avatar_items").select("item_id, is_equipped").eq("user_id", user.id),
-        supabase.from("student_progress").select("xp_earned, score, quiz_id, status").eq("user_id", user.id),
-        supabase.from("coin_transactions").select("amount").eq("user_id", user.id),
         supabase.from("profiles").select("avatar_url").eq("user_id", user.id).maybeSingle(),
       ]);
 
@@ -173,42 +171,20 @@ export default function AvatarShop({ onBack, onConfigChange }: AvatarShopProps) 
         setOwned(ownedRes.data as OwnedItem[]);
       }
 
-      let xp = 0;
-      let perfect = 0;
-      if (progressRes.data) {
-        xp = progressRes.data.reduce((s, p) => s + (p.xp_earned || 0), 0);
-        progressRes.data.forEach((p) => {
-          if (p.quiz_id && p.status === "completed" && p.score && p.score >= 100) {
-            perfect++;
-          }
-        });
+      if (motivationProgress) {
+        setCoins(motivationProgress.coins);
+        setGems(motivationProgress.gems);
       }
 
-      const spent = transactionsRes.data?.reduce((s, t) => s + t.amount, 0) || 0;
-      const calculatedCoins = xp + spent;
-      setCoins(calculatedCoins);
-      localStorage.setItem('eq_coins', String(calculatedCoins));
-
-      let gemsSpent = 0;
-      let gemsAwarded = 0;
-      let parsedAvatar: any = {};
-      
       if (profileRes.data?.avatar_url) {
         try {
-          parsedAvatar = JSON.parse(profileRes.data.avatar_url);
+          const parsedAvatar = JSON.parse(profileRes.data.avatar_url);
           if (parsedAvatar.gender) {
             setCharacterConfig({ ...DEFAULT_CONFIG, ...parsedAvatar });
             setPreviewConfig({ ...DEFAULT_CONFIG, ...parsedAvatar });
           }
-          gemsSpent = parsedAvatar.gems_spent || 0;
-          gemsAwarded = parsedAvatar.gems_awarded || 0;
         } catch (e) {}
       }
-
-      const calculatedGems = Math.floor(xp / 100) + (perfect * 2) + gemsAwarded - gemsSpent;
-      const finalGems = Math.max(0, calculatedGems);
-      setGems(finalGems);
-      localStorage.setItem('eq_gems', String(finalGems));
 
       const lastFreeSpin = localStorage.getItem('last_free_spin');
       setFreeSpinAvailable(lastFreeSpin !== new Date().toDateString());
@@ -221,7 +197,7 @@ export default function AvatarShop({ onBack, onConfigChange }: AvatarShopProps) 
 
   useEffect(() => {
     loadShopData();
-  }, [user]);
+  }, [user, motivationProgress]);
 
   const isOwned = (itemId: string) => {
     const uuid = getStableUuid(itemId);
@@ -256,12 +232,6 @@ export default function AvatarShop({ onBack, onConfigChange }: AvatarShopProps) 
 
       setPurchasing(item.id);
       try {
-        await supabase.from("coin_transactions").insert({
-          user_id: user.id,
-          amount: -costInfo.amount,
-          description: `Purchased ${item.name}`,
-        });
-        
         await supabase.from("student_avatar_items").insert({
           user_id: user.id,
           item_id: getStableUuid(item.id),
@@ -297,17 +267,18 @@ export default function AvatarShop({ onBack, onConfigChange }: AvatarShopProps) 
           ...prev.map(o => oldIds.includes(o.item_id) ? { ...o, is_equipped: false } : o),
           { item_id: getStableUuid(item.id), is_equipped: true }
         ]);
+
         const nextCoins = coins - costInfo.amount;
         setCoins(nextCoins);
-        localStorage.setItem('eq_coins', String(nextCoins));
+        await updateProgress({ coins: nextCoins });
         
         localStorage.removeItem('eq_avatar_discount');
-        window.dispatchEvent(new Event("wallet_update"));
         
         // Trigger unboxing visual celebration
         setRevealedCrateItem(item);
         toast({ title: `${item.icon} ${item.name} unlocked & equipped!` });
-      } catch {
+      } catch (err) {
+        console.error(err);
         toast({ title: "Purchase failed", variant: "destructive" });
       }
     } else {
@@ -319,26 +290,6 @@ export default function AvatarShop({ onBack, onConfigChange }: AvatarShopProps) 
 
       setPurchasing(item.id);
       try {
-        // Fetch current parsed avatar profile URL to write spent gems
-        const { data: prof } = await supabase
-          .from("profiles")
-          .select("avatar_url")
-          .eq("user_id", user.id)
-          .maybeSingle();
-        
-        let parsed: any = {};
-        if (prof?.avatar_url) {
-          try {
-            parsed = JSON.parse(prof.avatar_url);
-          } catch (e) {}
-        }
-        parsed.gems_spent = (parsed.gems_spent || 0) + costInfo.amount;
-
-        await supabase
-          .from("profiles")
-          .update({ avatar_url: JSON.stringify(parsed) })
-          .eq("user_id", user.id);
-
         await supabase.from("student_avatar_items").insert({
           user_id: user.id,
           item_id: getStableUuid(item.id),
@@ -362,7 +313,6 @@ export default function AvatarShop({ onBack, onConfigChange }: AvatarShopProps) 
             .in("item_id", oldCatIds);
         }
 
-        // Profile avatar_url already updated above with gems_spent, re-apply slot
         const { data: updatedProf } = await supabase.from("profiles").select("avatar_url").eq("user_id", user.id).maybeSingle();
         let reParsed: any = {};
         if (updatedProf?.avatar_url) { try { reParsed = JSON.parse(updatedProf.avatar_url); } catch (e) {} }
@@ -373,17 +323,18 @@ export default function AvatarShop({ onBack, onConfigChange }: AvatarShopProps) 
           ...prev.map(o => oldCatIds.includes(o.item_id) ? { ...o, is_equipped: false } : o),
           { item_id: getStableUuid(item.id), is_equipped: true }
         ]);
+
         const nextGems = gems - costInfo.amount;
         setGems(nextGems);
-        localStorage.setItem('eq_gems', String(nextGems));
+        await updateProgress({ gems: nextGems });
 
         localStorage.removeItem('eq_avatar_discount');
-        window.dispatchEvent(new Event("wallet_update"));
 
         // Trigger unboxing visual celebration
         setRevealedCrateItem(item);
         toast({ title: `${item.icon} ${item.name} unlocked & equipped!` });
-      } catch {
+      } catch (err) {
+        console.error(err);
         toast({ title: "Purchase failed", variant: "destructive" });
       }
     }
@@ -500,14 +451,9 @@ export default function AvatarShop({ onBack, onConfigChange }: AvatarShopProps) 
 
     try {
       if (!isFree) {
-        await supabase.from("coin_transactions").insert({
-          user_id: user.id,
-          amount: -30,
-          description: "Spin Lucky Wheel",
-        });
         const nextCoins = coins - 30;
         setCoins(nextCoins);
-        localStorage.setItem('eq_coins', String(nextCoins));
+        await updateProgress({ coins: nextCoins });
       } else {
         localStorage.setItem('last_free_spin', new Date().toDateString());
         setFreeSpinAvailable(false);
@@ -516,7 +462,8 @@ export default function AvatarShop({ onBack, onConfigChange }: AvatarShopProps) 
       const nextAngle = spinAngle + 1800 + (360 - index * 45) - 22.5 - (spinAngle % 360);
       setSpinAngle(nextAngle);
       setPendingPrizeIndex(index);
-    } catch {
+    } catch (err) {
+      console.error(err);
       setIsSpinning(false);
       toast({ title: "Spin failed", variant: "destructive" });
     }
@@ -530,39 +477,15 @@ export default function AvatarShop({ onBack, onConfigChange }: AvatarShopProps) 
 
     try {
       if (prize.type === 'coins') {
-        await supabase.from("coin_transactions").insert({
-          user_id: user.id,
-          amount: prize.value,
-          description: `Lucky Spin: Won ${prize.value} Coins`,
-        });
         const nextCoins = coins + prize.value;
         setCoins(nextCoins);
-        localStorage.setItem('eq_coins', String(nextCoins));
+        await updateProgress({ coins: nextCoins });
         setWonPrizeMessage(isTamil ? `நீங்கள் 🪙 ${prize.value} நாணயங்களை வென்றீர்கள்! 🎉` : `You won 🪙 ${prize.value} Coins!`);
         setShowPrizeDialog(true);
       } else if (prize.type === 'gems') {
-        const { data: prof } = await supabase
-          .from("profiles")
-          .select("avatar_url")
-          .eq("user_id", user.id)
-          .maybeSingle();
-        
-        let parsed: any = {};
-        if (prof?.avatar_url) {
-          try {
-            parsed = JSON.parse(prof.avatar_url);
-          } catch (e) {}
-        }
-        parsed.gems_awarded = (parsed.gems_awarded || 0) + prize.value;
-
-        await supabase
-          .from("profiles")
-          .update({ avatar_url: JSON.stringify(parsed) })
-          .eq("user_id", user.id);
-
         const nextGems = gems + prize.value;
         setGems(nextGems);
-        localStorage.setItem('eq_gems', String(nextGems));
+        await updateProgress({ gems: nextGems });
         setWonPrizeMessage(isTamil ? `நீங்கள் 💎 ${prize.value} ரத்தினங்களை வென்றீர்கள்! 🎉` : `You won 💎 ${prize.value} Gems!`);
         setShowPrizeDialog(true);
       } else {
@@ -581,19 +504,15 @@ export default function AvatarShop({ onBack, onConfigChange }: AvatarShopProps) 
         } else {
           // Fallback reward
           const fallbackCoins = rKey === 'epic' ? 100 : 200;
-          await supabase.from("coin_transactions").insert({
-            user_id: user.id,
-            amount: fallbackCoins,
-            description: `Lucky Spin: Epic/Legendary Fallback`,
-          });
           const nextCoins = coins + fallbackCoins;
           setCoins(nextCoins);
-          localStorage.setItem('eq_coins', String(nextCoins));
+          await updateProgress({ coins: nextCoins });
           setWonPrizeMessage(isTamil ? `உங்களிடம் ஏற்கனவே அனைத்து ${rKey === 'epic' ? 'அரிய' : 'உன்னத'} பொருட்களும் உள்ளன! அதற்கு பதிலாக 🪙 ${fallbackCoins} நாணயங்களைப் பெற்றீர்கள்.` : `You already own all ${rKey} items! Received 🪙 ${fallbackCoins} Coins instead.`);
           setShowPrizeDialog(true);
         }
       }
-    } catch {
+    } catch (err) {
+      console.error(err);
       toast({ title: isTamil ? "வெகுமதி அளிப்பதில் பிழை" : "Error awarding prize", variant: "destructive" });
     }
     setPendingPrizeIndex(null);
@@ -639,12 +558,6 @@ export default function AvatarShop({ onBack, onConfigChange }: AvatarShopProps) 
     const unboxed = candidatePool[Math.floor(Math.random() * candidatePool.length)];
 
     try {
-      await supabase.from("coin_transactions").insert({
-        user_id: user.id,
-        amount: -50,
-        description: `Unboxing Mystery Crate: ${unboxed.name}`,
-      });
-
       await supabase.from("student_avatar_items").insert({
         user_id: user.id,
         item_id: getStableUuid(unboxed.id),
@@ -653,14 +566,15 @@ export default function AvatarShop({ onBack, onConfigChange }: AvatarShopProps) 
       setOwned(prev => [...prev, { item_id: getStableUuid(unboxed.id), is_equipped: false }]);
       const nextCoins = coins - 50;
       setCoins(nextCoins);
-      localStorage.setItem('eq_coins', String(nextCoins));
+      await updateProgress({ coins: nextCoins });
 
       // Play shake animation and then pop up unbox dialog
       setTimeout(() => {
         setRevealedCrateItem(unboxed);
         setOpeningCrate(false);
       }, 1500);
-    } catch {
+    } catch (err) {
+      console.error(err);
       setOpeningCrate(false);
       toast({
         title: isTamil ? "பெட்டி திறப்பதில் தோல்வி" : "Crate opening failed",

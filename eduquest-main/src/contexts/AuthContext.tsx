@@ -4,6 +4,21 @@ import type { User, Session } from "@supabase/supabase-js";
 
 type AppRole = "student" | "admin" | "super_admin" | "school_admin" | "platform_admin" | "teacher";
 
+export interface MilestoneProgress {
+  current_chapter: number;
+  current_level: number;
+  cumulative_xp: number;
+  academic_rating: number;
+  chapter_xp_earned: number;
+  chapter_xp_required: number;
+  knowledge_points: number;
+  skill_stars: number;
+  wisdom_points: number;
+  scholar_points: number;
+  coins: number;
+  gems: number;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -16,8 +31,13 @@ interface AuthContextType {
     school_id: string | null;
     avatar_url: string | null;
   } | null;
+  motivationProgress: MilestoneProgress | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  updateProgress: (updates: Partial<MilestoneProgress>) => Promise<void>;
+  addXp: (amount: number) => Promise<void>;
+  addRating: (amount: number) => Promise<void>;
+  refreshMotivation: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -26,8 +46,13 @@ const AuthContext = createContext<AuthContextType>({
   role: null,
   roleLoading: true,
   profile: null,
+  motivationProgress: null,
   loading: true,
   signOut: async () => { },
+  updateProgress: async () => { },
+  addXp: async () => { },
+  addRating: async () => { },
+  refreshMotivation: async () => { },
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -106,13 +131,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [role, setRole] = useState<AppRole | null>(null);
   const [roleLoading, setRoleLoading] = useState(true);
   const [profile, setProfile] = useState<AuthContextType["profile"]>(null);
+  const [motivationProgress, setMotivationProgress] = useState<MilestoneProgress | null>(null);
   const [loading, setLoading] = useState(true);
 
   const lastFetchedId = useRef<string | null>(null);
   const fetchingRef = useRef<string | null>(null);
 
   const fetchUserData = async (userId: string) => {
-    // Skip if already fetching for this user (prevents race condition between getSession and onAuthStateChange)
+    // Skip if already fetching for this user
     if (fetchingRef.current === userId) return;
     fetchingRef.current = userId;
     setRoleLoading(true);
@@ -120,7 +146,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const t0 = performance.now();
 
-      const [roleResult, profileResult] = await Promise.all([
+      const [roleResult, profileResult, milestoneResult] = await Promise.all([
         supabase
           .from("user_roles")
           .select("role")
@@ -130,10 +156,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .select("full_name, roll_number, class_level, school_id, avatar_url")
           .eq("user_id", userId)
           .maybeSingle(),
+        supabase
+          .from("student_milestone_progress")
+          .select("*")
+          .eq("student_id", userId)
+          .maybeSingle()
       ]);
 
       if (import.meta.env.DEV) {
-        console.debug(`[Auth] Role+profile fetched in ${Math.round(performance.now() - t0)}ms`);
+        console.debug(`[Auth] Role+profile+milestone fetched in ${Math.round(performance.now() - t0)}ms`);
       }
 
       // Process role
@@ -147,6 +178,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const resolvedProfile = profileResult.data || null;
       if (resolvedProfile) setProfile(resolvedProfile);
 
+      // Process milestone progress
+      if (milestoneResult.data) {
+        setMotivationProgress(milestoneResult.data);
+      } else if (resolvedRole === "student") {
+        // Fallback placeholder if trigger delayed
+        setMotivationProgress({
+          current_chapter: 1,
+          current_level: 1,
+          cumulative_xp: 0,
+          academic_rating: 800,
+          chapter_xp_earned: 0,
+          chapter_xp_required: 500,
+          knowledge_points: 0,
+          skill_stars: 0,
+          wisdom_points: 0,
+          scholar_points: 0,
+          coins: 0,
+          gems: 0
+        });
+      }
+
       // Write to cache for next visit
       if (resolvedRole) writeCache(userId, resolvedRole, resolvedProfile);
     } catch (err) {
@@ -156,6 +208,74 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       fetchingRef.current = null;
       lastFetchedId.current = userId;
     }
+  };
+
+  const refreshMotivation = async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from("student_milestone_progress")
+        .select("*")
+        .eq("student_id", user.id)
+        .maybeSingle();
+      if (error) throw error;
+      if (data) setMotivationProgress(data);
+    } catch (err) {
+      console.error("[Auth] refreshMotivation failed:", err);
+    }
+  };
+
+  const updateProgress = async (updates: Partial<MilestoneProgress>) => {
+    if (!user || !motivationProgress) return;
+    try {
+      const newProgress = { ...motivationProgress, ...updates };
+      setMotivationProgress(newProgress);
+
+      const { error } = await supabase
+        .from("student_milestone_progress")
+        .update(updates)
+        .eq("student_id", user.id);
+
+      if (error) throw error;
+
+      // Dispatch custom wallet update event
+      window.dispatchEvent(new Event("wallet_update"));
+    } catch (err) {
+      console.error("[Auth] updateProgress failed:", err);
+    }
+  };
+
+  const addXp = async (amount: number) => {
+    if (!motivationProgress) return;
+    const newXp = motivationProgress.cumulative_xp + amount;
+    let level = motivationProgress.current_level;
+    let requiredXp = level * 500;
+    let chapterXp = motivationProgress.chapter_xp_earned + amount;
+
+    while (chapterXp >= requiredXp) {
+      chapterXp -= requiredXp;
+      level += 1;
+      requiredXp = level * 500;
+
+      // Trigger level-up event
+      window.dispatchEvent(new CustomEvent("eq_level_up", { detail: { level } }));
+    }
+
+    await updateProgress({
+      cumulative_xp: newXp,
+      current_level: level,
+      chapter_xp_earned: chapterXp,
+      chapter_xp_required: requiredXp
+    });
+  };
+
+  const addRating = async (amount: number) => {
+    if (!motivationProgress) return;
+    const newRating = Math.max(100, motivationProgress.academic_rating + amount);
+    await updateProgress({ academic_rating: newRating });
+
+    // Trigger rating adjustment notification
+    window.dispatchEvent(new CustomEvent("eq_rating_change", { detail: { rating: newRating, delta: amount } }));
   };
 
   useEffect(() => {
@@ -208,6 +328,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else {
           setRole(null);
           setProfile(null);
+          setMotivationProgress(null);
           setRoleLoading(false);
           lastFetchedId.current = null;
           clearCache();
@@ -229,10 +350,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSession(null);
     setRole(null);
     setProfile(null);
+    setMotivationProgress(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, role, roleLoading, profile, loading, signOut }}>
+    <AuthContext.Provider value={{
+      user,
+      session,
+      role,
+      roleLoading,
+      profile,
+      motivationProgress,
+      loading,
+      signOut,
+      updateProgress,
+      addXp,
+      addRating,
+      refreshMotivation
+    }}>
       {children}
     </AuthContext.Provider>
   );

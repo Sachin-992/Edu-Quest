@@ -22,8 +22,7 @@ interface StudentHeroStatsProps {
 }
 
 const StudentHeroStats = ({ refreshTrigger }: StudentHeroStatsProps) => {
-    const { user } = useAuth();
-    const [totalXP, setTotalXP] = useState(0);
+    const { user, motivationProgress } = useAuth();
     const [streakDays, setStreakDays] = useState(0);
     const [loading, setLoading] = useState(true);
 
@@ -33,12 +32,10 @@ const StudentHeroStats = ({ refreshTrigger }: StudentHeroStatsProps) => {
             setLoading(true);
             const { data: progress } = await supabase
                 .from("student_progress")
-                .select("xp_earned, lesson_id, status, completed_at")
+                .select("lesson_id, status, completed_at")
                 .eq("user_id", user.id);
 
             if (!progress) { setLoading(false); return; }
-
-            const xp = progress.reduce((sum, p) => sum + (p.xp_earned || 0), 0);
 
             // Calculate streak — normalize dates to IST (UTC+5:30)
             const toISTDateStr = (d: string) => {
@@ -67,19 +64,25 @@ const StudentHeroStats = ({ refreshTrigger }: StudentHeroStatsProps) => {
                 }
             }
 
-            setTotalXP(xp);
             setStreakDays(streak);
             setLoading(false);
         };
         fetchStats();
     }, [user, refreshTrigger]);
 
-    const currentLevel = [...LEVELS].reverse().find(l => totalXP >= l.xpNeeded) || LEVELS[0];
-    const nextLevel = LEVELS.find(l => l.xpNeeded > totalXP);
-    const xpProgress = nextLevel
-        ? ((totalXP - currentLevel.xpNeeded) / (nextLevel.xpNeeded - currentLevel.xpNeeded)) * 100
-        : 100;
-    const xpToNext = nextLevel ? nextLevel.xpNeeded - totalXP : 0;
+    const totalXP = motivationProgress?.cumulative_xp ?? 0;
+    const userLevel = motivationProgress?.current_level ?? 1;
+    const currentLevel = LEVELS.find(l => l.level === userLevel) || LEVELS[LEVELS.length - 1];
+    const nextLevel = LEVELS.find(l => l.level === userLevel + 1);
+
+    const xpProgress = motivationProgress && motivationProgress.chapter_xp_required > 0
+        ? (motivationProgress.chapter_xp_earned / motivationProgress.chapter_xp_required) * 100
+        : 0;
+
+    const xpToNext = motivationProgress
+        ? motivationProgress.chapter_xp_required - motivationProgress.chapter_xp_earned
+        : 0;
+
     const streakInfo = getStreakMultiplier(streakDays);
 
     if (loading) {

@@ -25,6 +25,8 @@ import PracticeMode from "./modes/PracticeMode";
 import DailyChallenge from "./modes/DailyChallenge";
 import NMMSAnalytics from "./quiz/NMMSAnalytics";
 import NMMSExamInfo from "./NMMSExamInfo";
+import MockTestEngine from "./modes/MockTestEngine";
+import PreviousYearPapers from "./modes/PreviousYearPapers";
 
 interface NMMSHubProps {
   onBack: () => void;
@@ -35,7 +37,9 @@ export type NMMSView =
   | { screen: "practice" }
   | { screen: "daily" }
   | { screen: "analytics" }
-  | { screen: "info" };
+  | { screen: "info" }
+  | { screen: "mock" }
+  | { screen: "papers" };
 
 export default function NMMSHub({ onBack }: NMMSHubProps) {
   const { user } = useAuth();
@@ -348,6 +352,60 @@ export default function NMMSHub({ onBack }: NMMSHubProps) {
                 </div>
               </div>
 
+              {/* Mock Test */}
+              <div
+                onClick={() => setCurrentView({ screen: "mock" })}
+                className="group relative rounded-3xl p-6 bg-gradient-to-br from-card/85 to-card/50 border border-border/40 hover:border-purple-600/40 shadow-xl transition-all cursor-pointer overflow-hidden"
+              >
+                <div className="absolute top-0 right-0 w-24 h-24 bg-purple-600/5 rounded-bl-full group-hover:bg-purple-600/10 transition-colors" />
+                <div className="flex gap-4">
+                  <div className="p-3 bg-purple-600/15 border border-purple-600/20 rounded-2xl self-start">
+                    <Brain className="w-6 h-6 text-purple-400" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-black text-foreground">
+                      {isTamil ? "முழு மாதிரித் தேர்வு" : "Full Length Mock Exam"}
+                    </h3>
+                    <p className="text-xs text-muted-foreground font-semibold leading-relaxed">
+                      {isTamil
+                        ? "உண்மையான தேர்வு நேரத்தை அனுபவியுங்கள். 90 கேள்விகள், 90 நிமிடங்கள், எதிர்மறை மதிப்பெண்கள் இல்லை."
+                        : "Experience the real NMMS exam conditions. 90-minute timed exam with full-length question grid."}
+                    </p>
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-purple-400 mt-2">
+                      {isTamil ? "மாதிரித் தேர்வு எழுது" : "Start Mock Exam"}
+                      <ChevronRight className="w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Previous Papers */}
+              <div
+                onClick={() => setCurrentView({ screen: "papers" })}
+                className="group relative rounded-3xl p-6 bg-gradient-to-br from-card/85 to-card/50 border border-border/40 hover:border-indigo-500/40 shadow-xl transition-all cursor-pointer overflow-hidden"
+              >
+                <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 rounded-bl-full group-hover:bg-indigo-500/10 transition-colors" />
+                <div className="flex gap-4">
+                  <div className="p-3 bg-indigo-500/15 border border-indigo-500/20 rounded-2xl self-start">
+                    <Calendar className="w-6 h-6 text-indigo-400" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-black text-foreground">
+                      {isTamil ? "முந்தைய வினாத்தாள்கள்" : "Previous Year Papers"}
+                    </h3>
+                    <p className="text-xs text-muted-foreground font-semibold leading-relaxed">
+                      {isTamil
+                        ? "கடந்த ஆண்டுகளின் அதிகாரப்பூர்வ வினாத்தாள்களைக் கொண்டு தேர்வு எழுதிப் பழகுங்கள்."
+                        : "Solve authentic board question papers from previous years under study or timed mode."}
+                    </p>
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-400 mt-2">
+                      {isTamil ? "வினாத்தாள்களைக் காண்க" : "Browse Papers"}
+                      <ChevronRight className="w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Exam Info */}
               <div
                 onClick={() => setCurrentView({ screen: "info" })}
@@ -415,6 +473,26 @@ export default function NMMSHub({ onBack }: NMMSHubProps) {
             exit={{ opacity: 0 }}
           >
             <NMMSExamInfo onBack={handleModeComplete} />
+          </motion.div>
+        )}
+
+        {currentView.screen === "mock" && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <MockTestEngine onBack={handleModeComplete} />
+          </motion.div>
+        )}
+
+        {currentView.screen === "papers" && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <PreviousYearPapers onBack={handleModeComplete} />
           </motion.div>
         )}
       </AnimatePresence>

@@ -21,6 +21,8 @@ interface EnhancedProfileCardProps {
   compact?: boolean;
   onViewProfile?: () => void;
   avatarConfig?: CharacterConfig;
+  academicRating?: number;
+  characterLevel?: number;
 }
 
 // ── Title Definitions ───────────────────────────────
@@ -250,6 +252,8 @@ const EnhancedProfileCard = (props: EnhancedProfileCardProps) => {
     compact = false,
     onViewProfile,
     avatarConfig,
+    academicRating,
+    characterLevel,
   } = props;
 
   const { language } = useLanguageStore();
@@ -380,11 +384,17 @@ const EnhancedProfileCard = (props: EnhancedProfileCardProps) => {
                   <span className="text-xs">🔥</span>
                 )}
               </div>
-              <div className="flex items-center gap-2 mt-0.5">
+              <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                 <span className="text-[10px] font-bold text-muted-foreground">
                   {activeTitle.emoji} {getTitleText(activeTitle.id, isTamil).label}
                 </span>
                 <span className="text-[10px] font-bold text-amber-500">{totalXP} XP</span>
+                {characterLevel !== undefined && (
+                  <span className="text-[10px] font-bold text-cyan-400 bg-cyan-500/10 px-1 py-0.2 rounded">L{characterLevel}</span>
+                )}
+                {academicRating !== undefined && (
+                  <span className="text-[10px] font-bold text-yellow-400 bg-yellow-500/10 px-1 py-0.2 rounded">⚡{academicRating}</span>
+                )}
               </div>
             </div>
 
@@ -543,6 +553,20 @@ const EnhancedProfileCard = (props: EnhancedProfileCardProps) => {
             <p className="text-xs font-bold text-muted-foreground mb-1.5">
               {isTamil ? `வகுப்பு ${classLevel} • ${getRankName(rank.id, true)} தரம்` : `Class ${classLevel} • ${rank.name} Rank`}
             </p>
+            {(characterLevel !== undefined || academicRating !== undefined) && (
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                {characterLevel !== undefined && (
+                  <span className="text-[10px] font-extrabold text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-2 py-0.5 rounded-full">
+                    {isTamil ? `நிலை ${characterLevel}` : `Level ${characterLevel}`}
+                  </span>
+                )}
+                {academicRating !== undefined && (
+                  <span className="text-[10px] font-extrabold text-yellow-500 bg-yellow-500/10 border border-yellow-500/20 px-2 py-0.5 rounded-full flex items-center gap-0.5">
+                    ⚡ {academicRating} {isTamil ? "மதிப்பீடு" : "Elo"}
+                  </span>
+                )}
+              </div>
+            )}
 
             {/* Active Title — clickable */}
             <motion.button

@@ -24,7 +24,7 @@ interface QuizPlayerProps {
 }
 
 const QuizPlayer = ({ quiz, subjectName, onBack, onComplete, onQuestionChange }: QuizPlayerProps) => {
-  const { user, profile } = useAuth();
+  const { user, profile, motivationProgress, updateProgress, addXp, addRating } = useAuth();
   const { toast } = useToast();
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -168,6 +168,20 @@ const QuizPlayer = ({ quiz, subjectName, onBack, onComplete, onQuestionChange }:
           // Success via student client
           broadcastQuizComplete({ userId: user.id, quizId: quiz.id, xp: xpForThisQuiz, score: percentage });
         }
+
+        // Chess.com-style Elo Rating calculations
+        let ratingDelta = 0;
+        if (percentage === 100) ratingDelta = 25;
+        else if (percentage >= 80) ratingDelta = 15;
+        else if (percentage < 50) ratingDelta = -10;
+
+        const finalCoins = percentage >= quiz.passing_score ? 10 : 5;
+
+        // Update Supabase Motivation System
+        await addXp(xpForThisQuiz);
+        await addRating(ratingDelta);
+        const curCoins = motivationProgress?.coins ?? 0;
+        await updateProgress({ coins: curCoins + finalCoins });
       }
 
       const xpEarned = percentage >= quiz.passing_score ? quiz.xp_reward : Math.floor(quiz.xp_reward / 2);
