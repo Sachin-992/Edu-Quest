@@ -196,7 +196,7 @@ const TeacherManager = ({ schoolId }: TeacherManagerProps) => {
 
     setAddLoading(true);
     try {
-      const res = await supabase.functions.invoke("manage-teacher", {
+      const { data, error } = await supabase.functions.invoke("manage-teacher", {
         body: {
           action: "create-teacher",
           full_name: fullName,
@@ -206,8 +206,16 @@ const TeacherManager = ({ schoolId }: TeacherManagerProps) => {
         },
       });
 
-      if (res.error) throw res.error;
-      if (res.data?.error) throw new Error(res.data.error);
+      if (error) {
+        let errMsg = error.message;
+        try {
+          const bodyText = await error.context.text();
+          const parsed = JSON.parse(bodyText);
+          if (parsed.error) errMsg = parsed.error;
+        } catch (_) {}
+        throw new Error(errMsg);
+      }
+      if (data?.error) throw new Error(data.error);
 
       setCreatedTeacher({ email });
       toast({ title: "Teacher account created successfully! 🧑‍🏫" });
@@ -288,15 +296,23 @@ const TeacherManager = ({ schoolId }: TeacherManagerProps) => {
     if (!confirm("Are you sure you want to remove this teacher? This will delete their profile and role. (Auth login is preserved but they lose school access).")) return;
     
     try {
-      const res = await supabase.functions.invoke("manage-teacher", {
+      const { data, error } = await supabase.functions.invoke("manage-teacher", {
         body: {
           action: "remove-teacher",
           teacher_id: teacherId,
         },
       });
 
-      if (res.error) throw res.error;
-      if (res.data?.error) throw new Error(res.data.error);
+      if (error) {
+        let errMsg = error.message;
+        try {
+          const bodyText = await error.context.text();
+          const parsed = JSON.parse(bodyText);
+          if (parsed.error) errMsg = parsed.error;
+        } catch (_) {}
+        throw new Error(errMsg);
+      }
+      if (data?.error) throw new Error(data.error);
 
       toast({ title: "Teacher removed successfully." });
       fetchTeachersAndSubjects();

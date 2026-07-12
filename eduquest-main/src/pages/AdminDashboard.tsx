@@ -58,7 +58,14 @@ const OverviewSkeleton = () => (
 const AdminDashboard = () => {
   const { role, profile, user, signOut } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState(() => {
+    return sessionStorage.getItem("current_admin_tab") || "overview";
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem("current_admin_tab", activeTab);
+  }, [activeTab]);
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [schoolId, setSchoolId] = useState<string>("");
   const tabsRef = useRef<HTMLDivElement>(null);
@@ -279,7 +286,10 @@ const AdminDashboard = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={signOut}
+            onClick={() => {
+              sessionStorage.removeItem("current_admin_tab");
+              signOut();
+            }}
             className="flex-1 rounded-xl h-8 text-[11px] font-bold text-destructive hover:bg-destructive/10 hover:text-destructive"
           >
             <LogOut className="h-3 w-3 mr-1" />

@@ -200,9 +200,9 @@ const StudentGrowthTracker = () => {
         <h2 className="text-xl font-bold flex items-center gap-2">
           <TrendingUp className="w-5 h-5" /> Student Growth Tracker
         </h2>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
           <Select value={selectedClass} onValueChange={(v) => { setSelectedClass(v); setSelectedStudentId(""); }}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-full sm:w-40">
               <SelectValue placeholder="All Classes" />
             </SelectTrigger>
             <SelectContent>
@@ -213,7 +213,7 @@ const StudentGrowthTracker = () => {
             </SelectContent>
           </Select>
           <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
-            <SelectTrigger className="w-52">
+            <SelectTrigger className="w-full sm:w-52">
               <SelectValue placeholder="Select student..." />
             </SelectTrigger>
             <SelectContent>

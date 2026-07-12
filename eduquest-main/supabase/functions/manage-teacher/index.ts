@@ -133,6 +133,18 @@ Deno.serve(async (req) => {
         return jsonResponse({ error: "teacher_id is required" }, 400, corsHeaders);
       }
 
+      // Delete teacher assignments first to prevent foreign key constraint violations
+      await serviceClient
+        .from("teacher_assignments" as any)
+        .delete()
+        .eq("teacher_id", teacher_id);
+
+      // Delete user from auth schema to free up email address
+      const { error: deleteUserErr } = await serviceClient.auth.admin.deleteUser(teacher_id);
+      if (deleteUserErr) {
+        console.warn("[manage-teacher] Warn deleting auth user:", deleteUserErr.message);
+      }
+
       // Delete user role
       await serviceClient
         .from("user_roles")
@@ -140,10 +152,10 @@ Deno.serve(async (req) => {
         .eq("user_id", teacher_id)
         .eq("role", "teacher");
 
-      // Deactivate profile
+      // Delete profile manually
       await serviceClient
         .from("profiles")
-        .update({ is_active: false })
+        .delete()
         .eq("user_id", teacher_id);
 
       // Audit log

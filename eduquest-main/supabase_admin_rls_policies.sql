@@ -145,12 +145,29 @@ END $$;
 
 -- ─── teacher_assignments ────────────────────────────────────
 DO $$ BEGIN
+  -- Delete old restrictive read policy
+  DROP POLICY IF EXISTS "Admins can read all teacher_assignments" ON public.teacher_assignments;
+  
+  -- Create comprehensive management policy for admins
   IF NOT EXISTS (
-    SELECT 1 FROM pg_policies WHERE policyname = 'Admins can read all teacher_assignments' AND tablename = 'teacher_assignments'
+    SELECT 1 FROM pg_policies WHERE policyname = 'Admins can manage all teacher_assignments' AND tablename = 'teacher_assignments'
   ) THEN
-    CREATE POLICY "Admins can read all teacher_assignments"
+    CREATE POLICY "Admins can manage all teacher_assignments"
+      ON public.teacher_assignments FOR ALL
+      USING (public.is_admin())
+      WITH CHECK (public.is_admin());
+  END IF;
+
+  -- Create read policy for teachers to access their assignments
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Teachers can read own assignments' AND tablename = 'teacher_assignments'
+  ) THEN
+    CREATE POLICY "Teachers can read own assignments"
       ON public.teacher_assignments FOR SELECT
-      USING (public.is_admin());
+      USING (
+        teacher_id = auth.uid()
+        OR public.is_admin()
+      );
   END IF;
 END $$;
 

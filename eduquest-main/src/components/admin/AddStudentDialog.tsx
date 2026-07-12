@@ -129,7 +129,7 @@ const AddStudentDialog = ({ schoolId, onStudentAdded }: AddStudentDialogProps) =
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogTrigger asChild>
         <Button className="gap-2 rounded-lg shadow-sm hover:shadow-md active:scale-[0.97] transition-all duration-200">
-          <UserPlus className="w-4 h-4" /> Add Student
+          <UserPlus className="w-4 h-4" /> <span className="hidden md:inline">Add Student</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">

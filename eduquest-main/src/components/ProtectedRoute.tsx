@@ -27,8 +27,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
     return <Navigate to="/" replace />;
   }
 
-  // Step 3: Role still loading — show spinner (never trust cache for auth decisions)
-  if (allowedRoles && roleLoading) {
+  // Step 3: Role still loading — show spinner if role is not yet loaded
+  if (allowedRoles && roleLoading && !role) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">

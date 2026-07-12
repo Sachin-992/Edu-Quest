@@ -13,7 +13,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Users, Search, ArrowUpDown, ChevronUp, ChevronDown,
-  ChevronLeft, ChevronRight, Key, Eye, EyeOff,
+  ChevronLeft, ChevronRight, Key, Eye, EyeOff, Award, Clock, Loader2, TrendingUp
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
@@ -98,6 +98,63 @@ const StudentList = ({
   const [showPin, setShowPin] = useState(false);
   const [isChangingPin, setIsChangingPin] = useState(false);
   const [pinChangeOpen, setPinChangeOpen] = useState(false);
+  
+  // Progress Details Dialog States
+  const [progressDialogOpen, setProgressDialogOpen] = useState(false);
+  const [progressLoading, setProgressLoading] = useState(false);
+  const [studentAttempts, setStudentAttempts] = useState<any[]>([]);
+  const [studentXP, setStudentXP] = useState(0);
+
+  const handleViewDetails = async (student: Student) => {
+    setSelectedStudent(student);
+    setProgressDialogOpen(true);
+    setProgressLoading(true);
+    try {
+      const admin = getAdminClient();
+      
+      const progressRes = await admin
+        .from("student_progress")
+        .select("score, xp_earned, completed_at, status, quiz_id, lesson_id")
+        .eq("user_id", student.user_id);
+
+      const progress = progressRes.data || [];
+      
+      const quizIds = progress.map(p => p.quiz_id).filter(Boolean);
+      const lessonIds = progress.map(p => p.lesson_id).filter(Boolean);
+
+      let quizMap = new Map<string, string>();
+      if (quizIds.length > 0) {
+        const { data: quizzes } = await admin.from("quizzes").select("id, title").in("id", quizIds);
+        if (quizzes) quizMap = new Map(quizzes.map(q => [q.id, q.title]));
+      }
+
+      let lessonMap = new Map<string, string>();
+      if (lessonIds.length > 0) {
+        const { data: lessons } = await admin.from("lessons").select("id, title").in("id", lessonIds);
+        if (lessons) lessonMap = new Map(lessons.map(l => [l.id, l.title]));
+      }
+
+      const enrichedAttempts = progress.map((p, i) => ({
+        id: i,
+        score: p.score,
+        xp_earned: p.xp_earned || 0,
+        completed_at: p.completed_at,
+        status: p.status,
+        type: p.quiz_id ? "Quiz" : "Lesson",
+        title: p.quiz_id ? (quizMap.get(p.quiz_id) || "Quiz Attempt") : (lessonMap.get(p.lesson_id) || "Lesson Completed")
+      })).sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime());
+
+      const totalXP = progress.reduce((sum, item) => sum + (item.xp_earned || 0), 0);
+
+      setStudentAttempts(enrichedAttempts);
+      setStudentXP(totalXP);
+    } catch (err) {
+      console.error("Error loading progress details:", err);
+    } finally {
+      setProgressLoading(false);
+    }
+  };
+
   const { toast } = useToast();
 
   const handlePinChange = async (e: React.FormEvent) => {
@@ -334,9 +391,56 @@ const StudentList = ({
       </span>
     </TableHead>
   );
+  const totalStudents = students.length;
+  const activeToday = students.filter(s => s.last_active && (Date.now() - new Date(s.last_active).getTime()) < 86400000).length;
+  const classAverage = students.filter(s => s.avg_score > 0).length > 0
+    ? Math.round(students.filter(s => s.avg_score > 0).reduce((sum, s) => sum + s.avg_score, 0) / students.filter(s => s.avg_score > 0).length)
+    : 0;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* ── Student Roster Stats Cards ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
+        <div className="bg-card border border-border/30 rounded-2xl p-5 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Roster</p>
+            <h3 className="text-2xl font-black text-foreground mt-1.5">{totalStudents}</h3>
+            <p className="text-[10px] text-muted-foreground mt-1">Students registered</p>
+          </div>
+          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shadow-sm">
+            <Users className="h-5 w-5 text-primary" />
+          </div>
+        </div>
+
+        <div className="bg-card border border-border/30 rounded-2xl p-5 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Active Today</p>
+            <h3 className="text-2xl font-black text-foreground mt-1.5 flex items-center gap-1.5">
+              {activeToday}
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inset-0 rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative rounded-full h-2.5 w-2.5 bg-emerald-500" />
+              </span>
+            </h3>
+            <p className="text-[10px] text-muted-foreground mt-1">Active in last 24h</p>
+          </div>
+          <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center shadow-sm">
+            <Clock className="h-5 w-5 text-emerald-500" />
+          </div>
+        </div>
+
+        <div className="bg-card border border-border/30 rounded-2xl p-5 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Class Average</p>
+            <h3 className="text-2xl font-black text-foreground mt-1.5">{classAverage}%</h3>
+            <p className="text-[10px] text-muted-foreground mt-1">Avg score across tests</p>
+          </div>
+          <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center shadow-sm">
+            <Award className="h-5 w-5 text-amber-500" />
+          </div>
+        </div>
+      </div>
+
       {/* ── Search & Filter Toolbar ── */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
         <div className="relative flex-1 w-full sm:max-w-sm">
@@ -463,18 +567,29 @@ const StudentList = ({
                       )}
                     </TableCell>
                     <TableCell className="text-right pr-6">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg"
-                        onClick={() => {
-                          setSelectedStudent(s);
-                          setPinChangeOpen(true);
-                        }}
-                      >
-                        <Key className="w-3.5 h-3.5 text-primary" />
-                        Change PIN
-                      </Button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg cursor-pointer"
+                          onClick={() => handleViewDetails(s)}
+                        >
+                          <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+                          View Profile
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg cursor-pointer"
+                          onClick={() => {
+                            setSelectedStudent(s);
+                            setPinChangeOpen(true);
+                          }}
+                        >
+                          <Key className="w-3.5 h-3.5 text-primary" />
+                          Change PIN
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -588,6 +703,134 @@ const StudentList = ({
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+      {/* ── Progress Details Dialog ── */}
+      <Dialog open={progressDialogOpen} onOpenChange={(open) => {
+        setProgressDialogOpen(open);
+        if (!open) {
+          setSelectedStudent(null);
+          setStudentAttempts([]);
+          setStudentXP(0);
+        }
+      }}>
+        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-emerald-500" /> Student Profile & Learning Progress
+            </DialogTitle>
+            <DialogDescription>
+              View detailed activity history, lessons completed, and quiz grades.
+            </DialogDescription>
+          </DialogHeader>
+
+          {progressLoading ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+              <span className="text-sm font-semibold text-muted-foreground">Loading learning history...</span>
+            </div>
+          ) : selectedStudent && (
+            <div className="space-y-6 mt-4 text-left">
+              {/* Profile Card Header */}
+              <div className="flex items-center gap-4 bg-muted/40 border border-border/40 p-4 rounded-2xl">
+                <Avatar className="w-14 h-14 text-lg font-black border-2 border-emerald-500/20">
+                  <AvatarFallback className="bg-gradient-to-br from-emerald-400 to-teal-500 text-white">
+                    {getInitials(selectedStudent.full_name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="space-y-1 min-w-0 flex-1">
+                  <h3 className="font-extrabold text-lg text-foreground truncate leading-tight">{selectedStudent.full_name}</h3>
+                  <div className="flex flex-wrap gap-2 items-center text-xs">
+                    <code className="bg-muted px-2 py-0.5 rounded text-muted-foreground font-mono text-[11px]">
+                      Roll No: {selectedStudent.roll_number || "N/A"}
+                    </code>
+                    {selectedStudent.class_level && (
+                      <span className="bg-emerald-500/10 text-emerald-500 font-extrabold px-2 py-0.5 rounded-full text-[10px]">
+                        Class {selectedStudent.class_level}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Stat Grid */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="border border-border/30 rounded-xl p-3 bg-card text-center">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase">Total XP</p>
+                  <p className="text-xl font-black text-primary mt-1">⭐ {studentXP} XP</p>
+                </div>
+                <div className="border border-border/30 rounded-xl p-3 bg-card text-center">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase">Quizzes Completed</p>
+                  <p className="text-xl font-black text-foreground mt-1">
+                    {studentAttempts.filter(a => a.type === "Quiz" && a.status === "completed").length}
+                  </p>
+                </div>
+                <div className="border border-border/30 rounded-xl p-3 bg-card text-center">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase">Average Score</p>
+                  <p className={`text-xl font-black mt-1 ${
+                    selectedStudent.avg_score >= 70 ? "text-emerald-600 dark:text-emerald-400" :
+                    selectedStudent.avg_score >= 40 ? "text-amber-600 dark:text-amber-400" :
+                    "text-red-600"
+                  }`}>
+                    {selectedStudent.avg_score}%
+                  </p>
+                </div>
+              </div>
+
+              {/* Progress Timeline */}
+              <div className="space-y-3">
+                <h4 className="font-extrabold text-sm border-b border-border/20 pb-1 text-foreground">Learning Activity Timeline</h4>
+                {studentAttempts.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground text-sm font-semibold">
+                    No active progress history recorded for this student yet.
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                    {studentAttempts.map((attempt) => (
+                      <div 
+                        key={attempt.id} 
+                        className="flex items-start justify-between p-3 rounded-xl border border-border/20 bg-card hover:bg-muted/10 transition-colors"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${
+                              attempt.type === "Quiz" 
+                                ? "bg-amber-500/10 border border-amber-500/20 text-amber-500" 
+                                : "bg-blue-500/10 border border-blue-500/20 text-blue-500"
+                            }`}>
+                              {attempt.type}
+                            </span>
+                            <span className="text-xs font-bold text-foreground line-clamp-1">{attempt.title}</span>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground">{new Date(attempt.completed_at).toLocaleString("en-IN", {
+                            day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"
+                          })}</p>
+                        </div>
+                        
+                        <div className="text-right space-y-1">
+                          <span className="text-xs font-extrabold text-emerald-500">+{attempt.xp_earned} XP</span>
+                          {attempt.type === "Quiz" && attempt.score != null && (
+                            <div className={`text-[10px] font-black px-1.5 py-0.5 rounded border mt-1 inline-block ${
+                              attempt.score >= 70 ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-600 dark:text-emerald-400" :
+                              attempt.score >= 40 ? "bg-amber-500/5 border-amber-500/20 text-amber-600 dark:text-amber-400" :
+                              "bg-red-500/5 border-red-500/20 text-red-600"
+                            }`}>
+                              Score: {attempt.score}%
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setProgressDialogOpen(false)} className="rounded-xl w-full sm:w-auto">
+              Close Profile
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

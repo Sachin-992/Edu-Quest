@@ -210,7 +210,8 @@ const StudentDashboard = () => {
       return;
     }
 
-    if (newView.screen === "nmms" && curLevel < 20) {
+    const isClass8Or7 = dbProfile?.class_level === 8 || dbProfile?.class_level === 7;
+    if (newView.screen === "nmms" && curLevel < 20 && !isClass8Or7) {
       toast({
         title: isTamil ? "அம்சம் பூட்டப்பட்டுள்ளது! 🔒" : "Feature Locked! 🔒",
         description: isTamil 
@@ -1324,8 +1325,9 @@ const StudentDashboard = () => {
 
                   {/* 5. NMMS Scholarship Prep (Level 20+) */}
                   {(() => {
+                    const isClass8Or7 = dbProfile?.class_level === 8 || dbProfile?.class_level === 7;
                     const reqLvl = 20;
-                    const isLocked = (motivationProgress?.current_level ?? 1) < reqLvl;
+                    const isLocked = !isClass8Or7 && (motivationProgress?.current_level ?? 1) < reqLvl;
                     return (
                       <motion.div
                         whileHover={isLocked ? {} : { y: -3, scale: 1.01 }}
@@ -1357,7 +1359,7 @@ const StudentDashboard = () => {
                                 ? "text-muted-foreground bg-muted/20 border-border/40" 
                                 : "text-purple-600 dark:text-purple-400 bg-purple-500/15 border-purple-500/30"
                             }`}>
-                              Level 20+
+                              {isClass8Or7 ? (isTamil ? "வகுப்பு 7/8 அனுமதி 🔓" : "Class 7/8 Access 🔓") : "Level 20+"}
                             </span>
                           </div>
                           <h4 className="text-sm font-black flex items-center gap-1.5">

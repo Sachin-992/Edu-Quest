@@ -214,7 +214,7 @@ const LeaderboardControls = () => {
         <div className="space-y-2">
           {/* Top 3 Podium */}
           {students.length >= 3 && (
-            <div className="grid grid-cols-3 gap-3 mb-6">
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-3 mb-6">
               {[1, 0, 2].map(podiumIdx => {
                 const s = students[podiumIdx];
                 if (!s) return null;
@@ -225,28 +225,28 @@ const LeaderboardControls = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: podiumIdx * 0.1, duration: 0.4 }}
-                    className={`relative flex flex-col items-center p-5 rounded-2xl border border-border/40 bg-card/80 ${rank === 1 ? 'ring-2 ring-yellow-400/30 shadow-lg shadow-yellow-500/10 -mt-2' : ''}`}
+                    className={`relative flex flex-col items-center p-2.5 sm:p-5 rounded-2xl border border-border/40 bg-card/80 ${rank === 1 ? 'ring-2 ring-yellow-400/30 shadow-lg shadow-yellow-500/10 -mt-2' : ''}`}
                   >
                     {/* Medal */}
-                    <div className={`h-8 w-8 rounded-full bg-gradient-to-br ${medalColors[rank - 1]} flex items-center justify-center text-white text-xs font-black shadow-md mb-3`}>
-                      {rank === 1 ? <Crown className="w-4 h-4" /> : rank}
+                    <div className={`h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-gradient-to-br ${medalColors[rank - 1]} flex items-center justify-center text-white text-[10px] sm:text-xs font-black shadow-md mb-2 sm:mb-3`}>
+                      {rank === 1 ? <Crown className="w-3 h-3 sm:w-4 sm:h-4" /> : rank}
                     </div>
                     {/* Avatar */}
-                    <div className={`h-12 w-12 rounded-full flex items-center justify-center text-sm font-bold ${avatarBgs[podiumIdx % avatarBgs.length]} mb-2`}>
+                    <div className={`h-9 w-9 sm:h-12 sm:w-12 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold ${avatarBgs[podiumIdx % avatarBgs.length]} mb-2`}>
                       {getInitials(s.full_name)}
                     </div>
-                    <p className="font-bold text-sm text-center truncate w-full">{s.full_name}</p>
+                    <p className="font-bold text-xs sm:text-sm text-center truncate w-full">{s.full_name}</p>
                     {s.class_level && (
-                      <span className="text-[10px] text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-full mt-1">
+                      <span className="text-[9px] sm:text-[10px] text-muted-foreground bg-muted/60 px-1.5 sm:px-2 py-0.5 rounded-full mt-1">
                         Class {s.class_level}
                       </span>
                     )}
-                    <div className="flex items-center gap-1 mt-2 text-primary font-black text-lg">
-                      <Zap className="w-4 h-4" />
+                    <div className="flex items-center gap-0.5 sm:gap-1 mt-1.5 text-primary font-black text-sm sm:text-lg">
+                      <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       {s.total_xp}
                     </div>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">
-                      {s.quizzes_taken} quiz{s.quizzes_taken !== 1 ? "zes" : ""} · {s.avg_score}% avg
+                    <p className="text-[8px] sm:text-[10px] text-muted-foreground mt-0.5 text-center leading-tight">
+                      {s.quizzes_taken} <span className="hidden sm:inline">quiz{s.quizzes_taken !== 1 ? "zes" : ""}</span><span className="sm:hidden">Q</span> · {s.avg_score}% <span className="hidden sm:inline">avg</span>
                     </p>
                   </motion.div>
                 );

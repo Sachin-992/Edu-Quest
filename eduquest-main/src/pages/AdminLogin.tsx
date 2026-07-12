@@ -93,14 +93,14 @@ const AdminLogin = () => {
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 mb-2">
             <img src="/eduquest-logo.png" alt="EduQuest" className="w-16 h-16 object-contain" />
-            <span className="text-2xl font-black">EduQuest Admin</span>
+            <span className="text-2xl font-black">EduQuest Portal</span>
           </div>
         </div>
 
         <Card className="shadow-card border-0">
           <CardHeader className="text-center pb-2">
-            <CardTitle className="text-xl">Admin Login 🔐</CardTitle>
-            <CardDescription>Sign in to access the admin dashboard</CardDescription>
+            <CardTitle className="text-xl">Teacher & Admin Login 🔐</CardTitle>
+            <CardDescription>Sign in to access the school dashboard</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">

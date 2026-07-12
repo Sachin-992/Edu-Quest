@@ -193,7 +193,7 @@ const BulkImportDialog = ({ schoolId, onImportComplete }: BulkImportDialogProps)
         <Dialog open={open} onOpenChange={handleClose}>
             <DialogTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-1.5 text-xs rounded-lg">
-                    <Upload className="h-3.5 w-3.5" /> Excel Import
+                    <Upload className="h-3.5 w-3.5" /> <span className="hidden md:inline">Excel Import</span>
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-lg">

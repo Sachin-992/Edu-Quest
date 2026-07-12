@@ -422,7 +422,7 @@ export default function NMMSManager() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant={activeTab === "list" ? "default" : "outline"}
             onClick={() => setActiveTab("list")}
@@ -473,7 +473,8 @@ export default function NMMSManager() {
             </div>
           ) : (
             <div className="border border-border/30 rounded-2xl overflow-hidden bg-card/40 backdrop-blur-sm shadow-md">
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
                 <thead className="bg-muted/30 border-b border-border/20">
                   <tr className="text-muted-foreground text-[10px] uppercase font-black tracking-wider text-left">
                     <th className="p-4">Paper</th>
@@ -536,6 +537,7 @@ export default function NMMSManager() {
                   )}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
         </div>

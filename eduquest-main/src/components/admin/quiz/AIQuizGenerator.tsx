@@ -211,9 +211,8 @@ const AIQuizGenerator = ({ lessonId, lessonTitle, classLevel, onQuizPublished }:
             setPublishing(false);
         }
     };
-
     return (
-        <div className="bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 border border-primary/20 rounded-2xl p-5 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 border border-primary/20 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center gap-4 justify-between text-left">
             <div>
                 <h3 className="font-bold flex items-center gap-2"><Sparkles className="w-5 h-5 text-primary" /> Auto Generate Quiz</h3>
                 <p className="text-sm text-muted-foreground mt-1">AI will create MCQ, True/False & Fill-in-the-Blank questions from the lesson content</p>
