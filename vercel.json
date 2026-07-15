@@ -1,6 +1,8 @@
 {
   "cleanUrls": true,
   "rewrites": [
+    { "source": "/quest/assets/:path*", "destination": "/quest/assets/:path*" },
+    { "source": "/quest/:path*", "destination": "/quest/index.html" },
     { "source": "/assets/:path*", "destination": "/assets/:path*" },
     { "source": "/:path*", "destination": "/index.html" }
   ]

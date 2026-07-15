@@ -7,6 +7,7 @@ const __dirname = path.dirname(__filename);
 
 const distRoot = path.join(__dirname, 'dist');
 const coreDist = path.join(__dirname, 'educore-main', 'edu-main', 'dist');
+const questDist = path.join(__dirname, 'eduquest-main', 'dist');
 
 // Helper to copy directory recursively
 function copyDirSync(src, dest) {
@@ -36,6 +37,14 @@ try {
     copyDirSync(coreDist, distRoot);
   } else {
     throw new Error(`EduCore build output missing at: ${coreDist}`);
+  }
+
+  console.log('🎮 Merging EduQuest (Learning Portal) into dist/quest...');
+  const questDest = path.join(distRoot, 'quest');
+  if (fs.existsSync(questDist)) {
+    copyDirSync(questDist, questDest);
+  } else {
+    throw new Error(`EduQuest build output missing at: ${questDist}`);
   }
 
   console.log('📄 Copying vercel.json configuration...');

@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "npm run dev --workspace=eduverse-os",
     "build:core": "npm run build --workspace=eduverse-os",
-    "build": "npm run build:core && node build-merge.js"
+    "build:quest": "npm run build --workspace=eduquest",
+    "build": "npm run build:core && npm run build:quest && node build-merge.js"
   }
 }
