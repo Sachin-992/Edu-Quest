@@ -8,6 +8,7 @@
     "eduquest-main"
   ],
   "scripts": {
+    "dev": "npm run dev --workspace=eduverse-os",
     "build:core": "npm run build --workspace=eduverse-os",
     "build": "npm run build:core && node build-merge.js"
   }
