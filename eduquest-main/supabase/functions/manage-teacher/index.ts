@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
         email,
         password,
         email_confirm: true,
-        user_metadata: { full_name },
+        user_metadata: { full_name, role: "teacher" },
       });
 
       if (createError) {
@@ -97,17 +97,56 @@ Deno.serve(async (req) => {
 
       const newUserId = newUser.user.id;
 
-      // Update profile
+      // Directly upsert into users table (ensures teacher shows up even if trigger fails)
+      const { data: userRecord, error: usersError } = await serviceClient
+        .from("users")
+        .upsert({
+          auth_id: newUserId,
+          email,
+          name: full_name,
+          role: "teacher",
+          status: "active",
+          school_id: school_id || null,
+          first_login: true,
+        }, { onConflict: "auth_id" })
+        .select("id")
+        .maybeSingle();
+
+      if (usersError) {
+        console.warn("[manage-teacher] users upsert warning:", usersError.message);
+      }
+
+      const internalUserId = userRecord?.id;
+      if (internalUserId) {
+        // Also insert into teachers table (EduCore's base table)
+        const { error: teacherError } = await serviceClient
+          .from("teachers")
+          .upsert({
+            user_id: internalUserId,
+            name: full_name,
+            full_name: full_name,
+            email: email,
+            subject: "General",
+            status: "active",
+            join_date: new Date().toISOString().split('T')[0]
+          }, { onConflict: "user_id" });
+        if (teacherError) {
+          console.warn("[manage-teacher] teachers upsert warning:", teacherError.message);
+        }
+      }
+
+      // Update profile school_id via profiles view (will set school in students if they exist)
       await serviceClient
         .from("profiles")
         .update({ full_name, school_id: school_id || null })
         .eq("user_id", newUserId);
 
-      // Assign teacher role
-      await serviceClient.from("user_roles").insert({
+      // Assign teacher role via user_roles view (updates users.role)
+      await serviceClient.from("user_roles").upsert({
         user_id: newUserId,
         role: "teacher",
-      });
+      }, { onConflict: "user_id" });
+
 
       // Audit log
       const { data: adminSchool } = await serviceClient.rpc("get_user_school_id", { _user_id: adminId });

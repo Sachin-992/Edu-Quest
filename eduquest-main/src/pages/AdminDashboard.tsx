@@ -108,11 +108,7 @@ const AdminDashboard = () => {
     fetchAssignments();
   }, [role, user]);
 
-  useEffect(() => {
-    if (role === "teacher" && activeTab === "students") {
-      setActiveTab("class_analytics");
-    }
-  }, [role, activeTab]);
+
 
   const handleNavigate = useCallback((tab: string) => {
     setActiveTab(tab);

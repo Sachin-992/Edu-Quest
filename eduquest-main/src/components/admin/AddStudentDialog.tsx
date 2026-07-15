@@ -63,20 +63,24 @@ const AddStudentDialog = ({ schoolId, onStudentAdded }: AddStudentDialogProps) =
       };
 
       // Try Edge Function first
-      let success = false;
       try {
         const res = await supabase.functions.invoke("create-student", {
           body: payload,
         });
 
         if (res.error) throw res.error;
+        if (res.data?.error) throw new Error(res.data.error);
+
+        // ✅ Success — show credentials screen
+        setCreatedCreds({ rollNumber, pin });
+        toast({ title: "Student created successfully! 🎉" });
+        onStudentAdded();
       } catch (edgeFnErr: any) {
         console.error("[AddStudent] Edge Function error:", edgeFnErr);
         let errorMsg = edgeFnErr.message;
         
         if (edgeFnErr.context && typeof edgeFnErr.context.json === "function") {
           try {
-            // Read the JSON response body
             const errBody = await edgeFnErr.context.json();
             if (errBody && errBody.error) {
               errorMsg = errBody.error;
@@ -91,11 +95,6 @@ const AddStudentDialog = ({ schoolId, onStudentAdded }: AddStudentDialogProps) =
         );
       }
 
-      if (success) {
-        setCreatedCreds({ rollNumber, pin });
-        toast({ title: "Student created successfully! 🎉" });
-        onStudentAdded();
-      }
     } catch (err: any) {
       console.error("[AddStudent] Error:", err);
       toast({ title: "Error", description: err.message, variant: "destructive" });

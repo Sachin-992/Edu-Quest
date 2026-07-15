@@ -1,0 +1,14 @@
+{
+  "name": "eduverse-root",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "workspaces": [
+    "educore-main/edu-main",
+    "eduquest-main"
+  ],
+  "scripts": {
+    "build:core": "npm run build --workspace=eduverse-os",
+    "build": "npm run build:core && node build-merge.js"
+  }
+}

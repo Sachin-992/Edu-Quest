@@ -1,0 +1,590 @@
+@import "tailwindcss";
+@import "./styles/performance.css";
+
+
+/* EDUCORE-OMEGA Global Styles */
+/* ============================================
+   CRITICAL VIEWPORT FOUNDATION
+   These rules prevent layout breakage on all devices
+   ============================================ */
+
+html {
+  /* Use dynamic viewport height for mobile browsers */
+  min-height: 100dvh;
+  /* Smooth scrolling */
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100dvh;
+}
+
+#root {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+/* Safe area padding for iOS notch/home indicator */
+@supports (padding: env(safe-area-inset-top)) {
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-area-all {
+    padding-top: env(safe-area-inset-top);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+  }
+}
+
+/* ============================================
+   MOBILE RESPONSIVE TYPOGRAPHY
+   Reduce font sizes on small screens
+   ============================================ */
+
+/* Base font size reduction for mobile */
+@media (max-width: 640px) {
+  html {
+    font-size: 14px;
+    /* Reduce from 16px */
+  }
+
+  /* Reduce heading sizes */
+  h1,
+  .text-2xl,
+  .text-3xl {
+    font-size: 1.25rem !important;
+    /* 17.5px */
+  }
+
+  h2,
+  .text-xl {
+    font-size: 1.125rem !important;
+    /* 15.75px */
+  }
+
+  h3,
+  .text-lg {
+    font-size: 1rem !important;
+    /* 14px */
+  }
+
+  /* Reduce body text */
+  p,
+  span,
+  label,
+  td,
+  th,
+  li {
+    font-size: 0.875rem;
+    /* 12.25px */
+  }
+
+  /* Keep small text small */
+  .text-xs {
+    font-size: 0.625rem !important;
+    /* 8.75px */
+  }
+
+  .text-sm {
+    font-size: 0.75rem !important;
+    /* 10.5px */
+  }
+}
+
+/* ============================================
+   BASE STYLES & CSS VARIABLES
+   ============================================ */
+
+:root {
+  /* Light mode colors */
+  --color-bg-primary: #f8fafc;
+  --color-bg-secondary: #ffffff;
+  --color-bg-tertiary: #f1f5f9;
+  --color-text-primary: #1e293b;
+  --color-text-secondary: #64748b;
+  --color-text-muted: #94a3b8;
+  --color-border: #e2e8f0;
+  --color-accent: #6366f1;
+  --color-accent-hover: #4f46e5;
+}
+
+.dark {
+  /* Dark mode colors */
+  --color-bg-primary: #0f172a;
+  --color-bg-secondary: #1e293b;
+  --color-bg-tertiary: #334155;
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+  --color-border: #334155;
+  --color-accent: #818cf8;
+  --color-accent-hover: #6366f1;
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+
+/* Fade In */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* Slide Up */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.4s ease-out forwards;
+}
+
+/* Slide Down */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-down {
+  animation: slideDown 0.4s ease-out forwards;
+}
+
+/* Scale In */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.3s ease-out forwards;
+}
+
+/* Pulse Glow */
+@keyframes pulseGlow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 0 8px rgba(99, 102, 241, 0);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s infinite;
+}
+
+/* Spin Slow */
+@keyframes spinSlow {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spinSlow 3s linear infinite;
+}
+
+/* Bounce Subtle */
+@keyframes bounceSubtle {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.animate-bounce-subtle {
+  animation: bounceSubtle 2s ease-in-out infinite;
+}
+
+/* Slide In (for toasts) */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out forwards;
+}
+
+/* Shrink (for toast progress bar) */
+@keyframes shrink {
+  from {
+    width: 100%;
+  }
+
+  to {
+    width: 0%;
+  }
+}
+
+.animate-shrink {
+  animation: shrink linear forwards;
+}
+
+/* Line clamp utility */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ============================================
+   TRANSITIONS
+   ============================================ */
+
+.transition-theme {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+.transition-transform-smooth {
+  transition: transform 0.2s ease-out;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+}
+
+.hover-scale:hover {
+  transform: scale(1.02);
+}
+
+/* ============================================
+   SCROLLBAR STYLING
+   ============================================ */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-tertiary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-text-muted);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}
+
+/* ============================================
+   RESPONSIVE UTILITIES
+   ============================================ */
+
+/* Hide on mobile */
+@media (max-width: 640px) {
+  .hide-mobile {
+    display: none !important;
+  }
+}
+
+/* Hide on desktop */
+@media (min-width: 641px) {
+  .hide-desktop {
+    display: none !important;
+  }
+}
+
+/* Mobile-first responsive padding */
+.responsive-p {
+  padding: 1rem;
+}
+
+@media (min-width: 768px) {
+  .responsive-p {
+    padding: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-p {
+    padding: 2rem;
+  }
+}
+
+/* ============================================
+   GLASS MORPHISM
+   ============================================ */
+
+.glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dark .glass {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ============================================
+   GRADIENT BACKGROUNDS
+   ============================================ */
+
+.gradient-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.gradient-success {
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+}
+
+.gradient-warning {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.gradient-info {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+/* ============================================
+   DARK MODE COMPONENT OVERRIDES
+   ============================================ */
+
+.dark .bg-white {
+  background-color: var(--color-bg-secondary);
+}
+
+.dark .text-slate-800 {
+  color: var(--color-text-primary);
+}
+
+.dark .text-slate-600 {
+  color: var(--color-text-secondary);
+}
+
+.dark .border-slate-200 {
+  border-color: var(--color-border);
+}
+
+.dark .bg-slate-50 {
+  background-color: var(--color-bg-tertiary);
+}
+
+.dark .bg-slate-100 {
+  background-color: var(--color-bg-tertiary);
+}
+
+/* ============================================
+   FOCUS STATES
+   ============================================ */
+
+.focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
+}
+
+/* ============================================
+   PRINT STYLES
+   ============================================ */
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+  }
+}
+
+/* ============================================
+   SCROLLBAR HIDE UTILITY
+   ============================================ */
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ============================================
+   MOBILE-FIRST TYPOGRAPHY SYSTEM
+   ============================================ */
+
+/* Responsive heading that scales down on mobile */
+.text-responsive-heading {
+  font-size: clamp(1.125rem, 4vw, 1.5rem);
+  line-height: 1.4;
+  font-weight: 700;
+}
+
+.text-responsive-title {
+  font-size: clamp(1rem, 3.5vw, 1.25rem);
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.text-responsive-body {
+  font-size: clamp(0.875rem, 3vw, 1rem);
+  line-height: 1.5;
+}
+
+.text-responsive-meta {
+  font-size: clamp(0.75rem, 2.5vw, 0.875rem);
+  line-height: 1.4;
+}
+
+/* Text clamping for mobile readability */
+.text-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.text-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ============================================
+   MOBILE TOUCH TARGETS
+   ============================================ */
+
+/* Ensures minimum 44px touch target height */
+.touch-target {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+.touch-target-sm {
+  min-height: 36px;
+}
+
+/* Touch-friendly button base */
+.btn-touch {
+  min-height: 44px;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ============================================
+   MOBILE LAYOUT HELPERS
+   ============================================ */
+
+/* Stack horizontally on desktop, vertically on mobile */
+@media (max-width: 639px) {
+  .mobile-stack {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .mobile-stack>* {
+    width: 100% !important;
+  }
+
+  .mobile-full-width {
+    width: 100% !important;
+  }
+
+  .mobile-p-reduced {
+    padding: 1rem !important;
+  }
+
+  .mobile-text-sm {
+    font-size: 0.875rem !important;
+  }
+}
+
+/* Card mobile optimization */
+.card-mobile {
+  padding: 1rem;
+}
+
+@media (min-width: 640px) {
+  .card-mobile {
+    padding: 1.5rem;
+  }
+}
+
+/* ============================================
+   ICON ALIGNMENT HELPERS
+   ============================================ */
+
+.icon-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.icon-baseline {
+  vertical-align: middle;
+}

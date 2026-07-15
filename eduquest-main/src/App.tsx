@@ -43,7 +43,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <OfflineBanner />
-        <BrowserRouter>
+        <BrowserRouter basename={import.meta.env.PROD ? "/quest" : undefined}>
           <ScrollToTop />
           <AuthProvider>
           <ErrorBoundary>

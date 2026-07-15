@@ -31,6 +31,7 @@ const StoryQuest = ({ onBack, classLevel }: StoryQuestProps) => {
   const [quizIdx, setQuizIdx] = useState(0);
   const [quizScore, setQuizScore] = useState(0);
   const [quizResult, setQuizResult] = useState<"correct" | "wrong" | null>(null);
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
 
   const isTamil = language === "ta";
 
@@ -59,12 +60,14 @@ const StoryQuest = ({ onBack, classLevel }: StoryQuestProps) => {
 
   const handleQuizAnswer = (answer: string) => {
     if (!selectedStory || quizResult) return;
+    setSelectedOption(answer);
     const q = selectedStory.questions[quizIdx];
     const correct = answer === q.answer; // Language translation is perfectly handled under the hood now
     setQuizResult(correct ? "correct" : "wrong");
     if (correct) setQuizScore((s) => s + 10);
 
     setTimeout(async () => {
+      setSelectedOption(null);
       if (quizIdx < selectedStory.questions.length - 1) {
         setQuizIdx((i) => i + 1);
         setQuizResult(null);
@@ -84,7 +87,7 @@ const StoryQuest = ({ onBack, classLevel }: StoryQuestProps) => {
             completed_at: new Date().toISOString(),
           });
           if (error) console.error("[StoryQuest] Failed to insert student_progress:", error);
-            broadcastActivityComplete({ userId: user.id, activityType: "story_quest", xp: quest.xp_reward });
+          broadcastActivityComplete({ userId: user.id, activityType: "story_quest", xp });
           toast({ title: `+${xp} XP earned! 📚🎉` });
         }
       }
@@ -335,12 +338,17 @@ const StoryQuest = ({ onBack, classLevel }: StoryQuestProps) => {
 
             <div className="space-y-3">
               {options.map((opt, i) => {
-                const isSelected = quizResult && opt === (quizResult === "correct" ? correctAnswer : opt);
+                const isSelected = selectedOption === opt;
                 const isCorrectOpt = opt === correctAnswer;
                 let variant = "bg-muted hover:bg-muted/80";
                 if (quizResult) {
-                  if (isCorrectOpt) variant = "bg-green-100 dark:bg-green-900/30 border-2 border-green-400";
-                  else variant = "bg-muted opacity-60";
+                  if (isCorrectOpt) {
+                    variant = "bg-green-100 dark:bg-green-900/30 border-2 border-green-400 text-green-900 dark:text-green-100";
+                  } else if (isSelected) {
+                    variant = "bg-red-100 dark:bg-red-900/30 border-2 border-red-400 text-red-900 dark:text-red-100";
+                  } else {
+                    variant = "bg-muted opacity-40";
+                  }
                 }
 
                 return (
@@ -358,6 +366,7 @@ const StoryQuest = ({ onBack, classLevel }: StoryQuestProps) => {
                     </span>
                     <span className="font-medium">{opt}</span>
                     {quizResult && isCorrectOpt && <CheckCircle2 className="w-5 h-5 text-green-500 ml-auto shrink-0" />}
+                    {quizResult && isSelected && !isCorrectOpt && <XCircle className="w-5 h-5 text-red-500 ml-auto shrink-0" />}
                   </motion.button>
                 );
               })}

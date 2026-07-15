@@ -233,8 +233,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const { error } = await supabase
         .from("student_milestone_progress")
-        .update(updates)
-        .eq("student_id", user.id);
+        .upsert({
+          ...newProgress,
+          student_id: user.id
+        });
 
       if (error) throw error;
 

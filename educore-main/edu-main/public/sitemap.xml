@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <!-- Homepage - English -->
+  <url>
+    <loc>https://www.educore-omega.com/en</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.educore-omega.com/en"/>
+    <xhtml:link rel="alternate" hreflang="ta" href="https://www.educore-omega.com/ta"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.educore-omega.com/en"/>
+    <lastmod>2026-06-11</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- Homepage - Tamil -->
+  <url>
+    <loc>https://www.educore-omega.com/ta</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.educore-omega.com/en"/>
+    <xhtml:link rel="alternate" hreflang="ta" href="https://www.educore-omega.com/ta"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.educore-omega.com/en"/>
+    <lastmod>2026-06-11</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- Features - English -->
+  <url>
+    <loc>https://www.educore-omega.com/en/features</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.educore-omega.com/en/features"/>
+    <xhtml:link rel="alternate" hreflang="ta" href="https://www.educore-omega.com/ta/features"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.educore-omega.com/en/features"/>
+    <lastmod>2026-06-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Features - Tamil -->
+  <url>
+    <loc>https://www.educore-omega.com/ta/features</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.educore-omega.com/en/features"/>
+    <xhtml:link rel="alternate" hreflang="ta" href="https://www.educore-omega.com/ta/features"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.educore-omega.com/en/features"/>
+    <lastmod>2026-06-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+
+  <!-- Contact - English -->
+  <url>
+    <loc>https://www.educore-omega.com/en/contact</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.educore-omega.com/en/contact"/>
+    <xhtml:link rel="alternate" hreflang="ta" href="https://www.educore-omega.com/ta/contact"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.educore-omega.com/en/contact"/>
+    <lastmod>2026-06-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Contact - Tamil -->
+  <url>
+    <loc>https://www.educore-omega.com/ta/contact</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.educore-omega.com/en/contact"/>
+    <xhtml:link rel="alternate" hreflang="ta" href="https://www.educore-omega.com/ta/contact"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.educore-omega.com/en/contact"/>
+    <lastmod>2026-06-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- About - English -->
+  <url>
+    <loc>https://www.educore-omega.com/en/about</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.educore-omega.com/en/about"/>
+    <xhtml:link rel="alternate" hreflang="ta" href="https://www.educore-omega.com/ta/about"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.educore-omega.com/en/about"/>
+    <lastmod>2026-06-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- About - Tamil -->
+  <url>
+    <loc>https://www.educore-omega.com/ta/about</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.educore-omega.com/en/about"/>
+    <xhtml:link rel="alternate" hreflang="ta" href="https://www.educore-omega.com/ta/about"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.educore-omega.com/en/about"/>
+    <lastmod>2026-06-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+</urlset>

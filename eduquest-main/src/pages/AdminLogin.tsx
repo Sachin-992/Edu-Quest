@@ -16,10 +16,58 @@ const AdminLogin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Layer 3: Pre-warm Supabase connection (DNS + TLS done before user clicks Sign In)
+  // Layer 3: Pre-warm Supabase connection / handle SSO redirect auto-login
   useEffect(() => {
-    supabase.auth.getSession().catch(() => { });
-  }, []);
+    const params = new URLSearchParams(window.location.search);
+    const accessToken = params.get("access_token");
+    const refreshToken = params.get("refresh_token");
+
+    if (accessToken && refreshToken) {
+      setLoading(true);
+      supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      }).then(async ({ data, error }) => {
+        if (!error && data.session) {
+          // Verify admin privileges
+          const { data: roleData } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", data.session.user.id);
+
+          const roles = (roleData || []).map(r => r.role);
+          const adminRoles = ["admin", "super_admin", "school_admin", "platform_admin", "teacher"];
+          const isAdmin = roles.some(r => adminRoles.includes(r));
+
+          if (!isAdmin) {
+            // Also check if public.users role metadata says admin
+            const metadataRole = data.session.user.user_metadata?.role;
+            if (metadataRole === 'admin' || metadataRole === 'teacher') {
+              navigate("/admin");
+              return;
+            }
+
+            await supabase.auth.signOut();
+            toast({ title: "Access Denied", description: "This account does not have admin privileges.", variant: "destructive" });
+          } else {
+            navigate("/admin");
+          }
+        } else {
+          toast({
+            title: "Session Error 🔑",
+            description: "Failed to automatically log in. Please enter credentials.",
+            variant: "destructive",
+          });
+        }
+      }).catch(err => {
+        console.error(err);
+      }).finally(() => {
+        setLoading(false);
+      });
+    } else {
+      supabase.auth.getSession().catch(() => { });
+    }
+  }, [navigate, toast]);
 
   // Rate limiting: max 5 attempts per 2 minutes
   const [attempts, setAttempts] = useState(0);

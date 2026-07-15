@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+Allow: /en/
+Allow: /ta/
+Allow: /en/features
+Allow: /ta/features
+Allow: /en/contact
+Allow: /ta/contact
+Disallow: /admin/
+Disallow: /teacher/
+Disallow: /student/
+Disallow: /parent/
+Disallow: /login
+Disallow: /reset-password
+Disallow: /api/
+Disallow: /_next/
+Disallow: /static/
+
+Sitemap: https://www.educore-omega.com/sitemap.xml

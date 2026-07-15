@@ -117,22 +117,58 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Update profile with school/class/roll
-    await serviceClient
-      .from("profiles")
-      .update({
-        roll_number,
-        class_level,
-        school_id: school_id || null,
-        full_name,
-      })
-      .eq("user_id", newUser.user.id);
+    // Step 1: Ensure user row exists in users table (trigger may have run already)
+    const newUserId = newUser.user.id;
+    const { data: existingUser } = await serviceClient
+      .from("users")
+      .select("id")
+      .eq("auth_id", newUserId)
+      .maybeSingle();
 
-    // Assign student role
-    await serviceClient.from("user_roles").insert({
-      user_id: newUser.user.id,
+    let internalUserId = existingUser?.id;
+
+    if (!internalUserId) {
+      // Trigger didn't run yet — insert manually
+      const { data: insertedUser } = await serviceClient
+        .from("users")
+        .insert({
+          auth_id: newUserId,
+          email: generatedEmail,
+          name: full_name,
+          role: "student",
+          status: "active",
+          school_id: school_id || null,
+          first_login: true,
+        })
+        .select("id")
+        .single();
+      internalUserId = insertedUser?.id;
+    }
+
+    if (internalUserId) {
+      // Step 2: Insert directly into students table (this is what profiles view reads from)
+      await serviceClient.from("students").upsert({
+        user_id: internalUserId,
+        name: full_name,
+        full_name,
+        school_id: school_id || null,
+        roll_number,
+        roll_no: parseInt(roll_number.replace(/\D/g, "") || "0") || null,
+        class: String(classLevelNum),
+        status: "active",
+      }, { onConflict: "user_id" });
+
+      // Step 3: Update school_id on users row too (for profiles view COALESCE)
+      if (school_id) {
+        await serviceClient.from("users").update({ school_id }).eq("id", internalUserId);
+      }
+    }
+
+    // Step 4: Ensure student role is set (user_roles is a view of users.role)
+    await serviceClient.from("user_roles").upsert({
+      user_id: newUserId,
       role: "student",
-    });
+    }, { onConflict: "user_id" });
 
     // Audit log
     const { data: adminSchool } = await serviceClient.rpc("get_user_school_id", { _user_id: adminId });
@@ -142,15 +178,16 @@ Deno.serve(async (req) => {
         user_id: adminId,
         action: "student.create",
         resource_type: "student",
-        resource_id: newUser.user.id,
+        resource_id: newUserId,
         metadata: { full_name, roll_number, class_level },
       });
     }
 
     return new Response(
-      JSON.stringify({ success: true, user_id: newUser.user.id }),
+      JSON.stringify({ success: true, user_id: newUserId }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
+
   } catch (err) {
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
