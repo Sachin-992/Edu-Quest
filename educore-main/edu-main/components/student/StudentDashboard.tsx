@@ -46,8 +46,6 @@ import { CLASSES } from '../ClassSelector';
 import { translateSubject, translateClassName } from '../../utils/translateSubject';
 import MarksGradesPage from './MarksGradesPage';
 import { supabase } from '../../services/supabaseClient';
-import QuestDashboard from '../../pages/StudentDashboard';
-import { GameBackground } from '../layout/GameBackground';
 
 
 
@@ -123,7 +121,23 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     const [studentProfile, setStudentProfile] = useState<any>(null); // Dynamic Profile Data
     const [profileError, setProfileError] = useState<string | null>(null); // Error state
 
-    const handleTabClick = (itemId: string) => {
+    const handleTabClick = async (itemId: string) => {
+        if (itemId === 'eduquest') {
+            if (!supabase) return;
+            const { data: { session } } = await supabase.auth.getSession();
+            const eduQuestBase = import.meta.env.VITE_EDUQUEST_URL || 
+                (window.location.origin.includes('localhost:') || window.location.origin.includes('127.0.0.1:') 
+                    ? window.location.origin.replace(/:\d+$/, ':8080') 
+                    : `${window.location.origin}/quest`);
+            
+            if (session) {
+                const url = `${eduQuestBase}/login?access_token=${encodeURIComponent(session.access_token)}&refresh_token=${encodeURIComponent(session.refresh_token)}`;
+                window.open(url, '_blank');
+            } else {
+                window.open(`${eduQuestBase}/login`, '_blank');
+            }
+            return;
+        }
         setActiveTab(itemId as any);
     };
 
@@ -1455,15 +1469,6 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                                 )}
                             </div>
                         )}
-                        {activeTab === 'eduquest' && (
-                            <>
-                                <GameBackground />
-                                <QuestDashboard />
-                            </>
-                        )}
-
-
-
                     </div>
                 </div>
 
