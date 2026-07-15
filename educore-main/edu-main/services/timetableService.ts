@@ -38,17 +38,44 @@ export const timetableService = {
         if (!isPersistenceAvailable()) return { data: null, error: 'DB Unavailable' };
 
         try {
+            let gradeLevel = '';
+            let sectionName = '';
+
+            const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(classId);
+
+            if (isUUID) {
+                const { data: classData } = await supabase!
+                    .from('classes')
+                    .select('grade_level, section')
+                    .eq('id', classId)
+                    .single();
+                if (classData) {
+                    gradeLevel = String(classData.grade_level);
+                    sectionName = classData.section;
+                }
+            } else {
+                const [cls, section] = classId.includes('-') ? classId.split('-') : [classId, 'A'];
+                gradeLevel = cls;
+                sectionName = section;
+            }
+
             const { data, error } = await supabase!
                 .from('timetables')
                 .select('*')
-                .eq('class_id', classId)
+                .eq('class', gradeLevel)
+                .eq('section', sectionName)
                 .single();
 
             if (error && error.code !== 'PGRST116') { // Ignore "Row not found"
                 throw error;
             }
 
-            return { data: data as Timetable };
+            const mapped = data ? {
+                ...data,
+                class_id: classId
+            } : null;
+
+            return { data: mapped as Timetable | null };
         } catch (err: any) {
             return { data: null, error: err.message };
         }
@@ -73,10 +100,32 @@ export const timetableService = {
             const existing = await timetableService.getTimetableByClass(classId);
             if (existing.data) return existing;
 
+            let gradeLevel = '';
+            let sectionName = '';
+
+            const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(classId);
+
+            if (isUUID) {
+                const { data: classData } = await supabase!
+                    .from('classes')
+                    .select('grade_level, section')
+                    .eq('id', classId)
+                    .single();
+                if (classData) {
+                    gradeLevel = String(classData.grade_level);
+                    sectionName = classData.section;
+                }
+            } else {
+                const [cls, section] = classId.includes('-') ? classId.split('-') : [classId, 'A'];
+                gradeLevel = cls;
+                sectionName = section;
+            }
+
             const { data, error } = await supabase!
                 .from('timetables')
                 .insert([{
-                    class_id: classId,
+                    class: gradeLevel,
+                    section: sectionName,
                     status: 'draft',
                     created_by: actorId
                 }])
@@ -96,7 +145,12 @@ export const timetableService = {
                 details: `Created draft timetable for class ${classId}`
             });
 
-            return { data: data as Timetable };
+            const mapped = data ? {
+                ...data,
+                class_id: classId
+            } : null;
+
+            return { data: mapped as Timetable | null };
         } catch (err: any) {
             return { data: null, error: err.message };
         }
@@ -111,7 +165,6 @@ export const timetableService = {
                 .from('timetable_periods')
                 .select(`
                     *,
-                    subject:subjects(name, code),
                     teacher:teachers(name)
                 `)
                 .eq('timetable_id', timetableId)
@@ -119,15 +172,19 @@ export const timetableService = {
                 .order('period_number');
 
             if (error) throw error;
-            return { data: data as any[] };
+
+            // Map subject text column for frontend compatibility
+            const mapped = (data || []).map((p: any) => ({
+                ...p,
+                subject: p.subject ? { name: p.subject, code: p.subject.substring(0, 4).toUpperCase() } : null
+            }));
+
+            return { data: mapped as any[] };
         } catch (err: any) {
             return { data: [], error: err.message };
         }
     },
 
-    /**
-     * UPSERT a Period Slot
-     */
     /**
      * UPSERT a Period Slot (Phase 6 Logic)
      */
@@ -168,16 +225,26 @@ export const timetableService = {
             }
 
             // Determine if using legacy 'subject' column or new logic
-            const legacySubjectText = period.activity_label || 'Subject';
+            let subjectName = 'Subject';
+            if (period.subject_id) {
+                const { data: subData } = await supabase!
+                    .from('subjects')
+                    .select('name')
+                    .eq('id', period.subject_id)
+                    .single();
+                if (subData) {
+                    subjectName = subData.name;
+                }
+            } else if (period.activity_label) {
+                subjectName = period.activity_label;
+            }
 
             const upsertData = {
                 timetable_id: period.timetable_id,
                 day_of_week: period.day_of_week,
                 period_number: period.period_number,
-                subject_id: period.subject_id || null,
-                activity_label: period.activity_label || null,
                 teacher_id: period.teacher_id || null,
-                subject: legacySubjectText,
+                subject: subjectName,
                 start_time: period.start_time,
                 end_time: period.end_time,
                 room_number: period.room_number || null

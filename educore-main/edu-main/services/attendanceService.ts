@@ -235,8 +235,12 @@ export const attendanceService = {
                 .select(`
                     *,
                     timetable_periods:timetable_period_id (
-                        class, section, period_number, subject_id,
-                        subjects:subject_id (name)
+                        period_number,
+                        subject,
+                        timetables:timetable_id (
+                            class,
+                            section
+                        )
                     )
                 `)
                 .eq('student_id', studentId)
@@ -259,15 +263,41 @@ export const attendanceService = {
             // Filter by subject if specified
             let records = data || [];
             if (filters?.subjectId) {
-                records = records.filter((r: any) =>
-                    r.timetable_periods?.subject_id === filters.subjectId
-                );
+                // subjectId can be name or UUID
+                const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(filters.subjectId);
+                if (isUUID) {
+                    // Look up subject name
+                    const { data: subData } = await supabase!
+                        .from('subjects')
+                        .select('name')
+                        .eq('id', filters.subjectId)
+                        .single();
+                    if (subData) {
+                        records = records.filter((r: any) =>
+                            r.timetable_periods?.subject === subData.name
+                        );
+                    }
+                } else {
+                    records = records.filter((r: any) =>
+                        r.timetable_periods?.subject === filters.subjectId
+                    );
+                }
             }
 
-            const mapped = (records || []).map((r: any) => ({
-                ...r,
-                date: r.attendance_date
-            })) as PeriodAttendance[];
+            const mapped = (records || []).map((r: any) => {
+                const tp = r.timetable_periods;
+                return {
+                    ...r,
+                    date: r.attendance_date,
+                    timetable_periods: tp ? {
+                        period_number: tp.period_number,
+                        subject_id: tp.subject,
+                        class: tp.timetables?.class || '',
+                        section: tp.timetables?.section || '',
+                        subjects: { name: tp.subject }
+                    } : null
+                };
+            }) as PeriodAttendance[];
 
             return { data: mapped };
         } catch (err: any) {
@@ -309,7 +339,7 @@ export const attendanceService = {
                 .from('attendance_periods')
                 .select(`
                     status,
-                    timetable_periods:timetable_period_id (subject_id)
+                    timetable_periods:timetable_period_id (subject)
                 `)
                 .eq('student_id', studentId);
 
@@ -317,9 +347,23 @@ export const attendanceService = {
                 return { percentage: 0, total: 0, present: 0, absent: 0, late: 0 };
             }
 
+            // Resolve subjectId to name if UUID
+            let targetSubjectName = subjectId;
+            const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(subjectId);
+            if (isUUID) {
+                const { data: subData } = await supabase!
+                    .from('subjects')
+                    .select('name')
+                    .eq('id', subjectId)
+                    .single();
+                if (subData) {
+                    targetSubjectName = subData.name;
+                }
+            }
+
             // Filter by subject
             const subjectRecords = data.filter((r: any) =>
-                r.timetable_periods?.subject_id === subjectId
+                r.timetable_periods?.subject === targetSubjectName
             );
 
             const working = subjectRecords.filter((r: any) => !['medical_leave', 'excused_leave', 'holiday', 'transfer_pending'].includes(r.status));
@@ -418,14 +462,16 @@ export const attendanceService = {
         }
 
         try {
-            // Get the class and section from the period
+            // Get the class and section from the timetables via timetable_periods
             const { data: period, error: periodError } = await supabase!
                 .from('timetable_periods')
-                .select('timetable:timetable_id(class_id)')
+                .select(`
+                    timetables:timetable_id(class, section)
+                `)
                 .eq('id', timetablePeriodId)
                 .single();
 
-            if (periodError || !period || !period.timetable) {
+            if (periodError || !period || !period.timetables) {
                 // Fallback to checking direct class/section if the database relation maps differently
                 const { data: periodFallback } = await supabase!
                     .from('timetable_periods')
@@ -446,21 +492,14 @@ export const attendanceService = {
                 return { data: [], error: 'Period timetable not found' };
             }
 
-            // Get grade/section from class ID
-            const { data: cls } = await supabase!
-                .from('classes')
-                .select('grade_level, section')
-                .eq('id', (period.timetable as any).class_id)
-                .single();
-
-            if (!cls) return { data: [], error: 'Class details not found' };
+            const { class: gradeLevel, section } = period.timetables as any;
 
             // Get students in that class
             const { data: students, error: studentsError } = await supabase!
                 .from('students')
                 .select('id, name, roll_no')
-                .eq('class', cls.grade_level)
-                .eq('section', cls.section)
+                .eq('class', gradeLevel)
+                .eq('section', section)
                 .neq('status', 'inactive')
                 .order('roll_no', { ascending: true });
 

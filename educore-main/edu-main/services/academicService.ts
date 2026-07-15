@@ -1041,63 +1041,61 @@ export const academicService = {
         if (!isPersistenceAvailable()) return { data: [], error: 'DB Unavailable' };
 
         try {
-            // classId can be UUID or "6-A" format
-            let actualClassId: string;
+            let gradeLevel = '';
+            let sectionName = '';
 
             const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(classId);
 
             if (isUUID) {
-                actualClassId = classId;
-            } else {
-                // Parse "6-A" format and look up UUID
-                const [cls, section] = classId.includes('-') ? classId.split('-') : [classId, 'A'];
-
-                const { data: classData, error: lookupError } = await supabase!
+                const { data: classData } = await supabase!
                     .from('classes')
-                    .select('id')
-                    .eq('grade_level', cls)
-                    .eq('section', section)
+                    .select('grade_level, section')
+                    .eq('id', classId)
                     .single();
-
-                if (lookupError || !classData) {
-                    console.warn(`Class not found: ${cls}-${section}`);
-                    return { data: [] };
+                if (classData) {
+                    gradeLevel = String(classData.grade_level);
+                    sectionName = classData.section;
                 }
-                actualClassId = classData.id;
+            } else {
+                const [cls, section] = classId.includes('-') ? classId.split('-') : [classId, 'A'];
+                gradeLevel = cls;
+                sectionName = section;
             }
 
             let query = supabase!
                 .from('academic_files')
-                .select(`
-                    *,
-                    subjects(name),
-                    classes(grade_level, section)
-                `)
-                .eq('class_id', actualClassId);
+                .select('*')
+                .eq('class', gradeLevel)
+                .eq('section', sectionName);
 
             if (subjectId) {
-                // If subjectId is a name, look it up
                 const isSubjectUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(subjectId);
                 if (isSubjectUUID) {
-                    query = query.eq('subject_id', subjectId);
-                } else {
-                    // Lookup subject by name for this class
                     const { data: subjectData } = await supabase!
                         .from('subjects')
-                        .select('id')
-                        .eq('class_id', actualClassId)
-                        .ilike('name', subjectId)
+                        .select('name')
+                        .eq('id', subjectId)
                         .single();
                     if (subjectData) {
-                        query = query.eq('subject_id', subjectData.id);
+                        query = query.eq('subject', subjectData.name);
                     }
+                } else {
+                    query = query.eq('subject', subjectId);
                 }
             }
 
             const { data, error } = await query.order('created_at', { ascending: false });
 
             if (error) throw error;
-            return { data: data || [] };
+
+            // Map response for frontend compatibility
+            const mapped = (data || []).map((file: any) => ({
+                ...file,
+                subjects: { name: file.subject },
+                classes: { grade_level: file.class, section: file.section }
+            }));
+
+            return { data: mapped };
         } catch (err: any) {
             return { data: [], error: err.message };
         }
@@ -1218,15 +1216,15 @@ export const academicService = {
 
             if (uploadError) throw uploadError;
 
-            // Record in academic_files table (using class_id and subject_id UUIDs)
+            // Record in academic_files table (using class, section, subject text columns)
             const payload: any = {
-                title: file.name.replace(/\.[^/.]+$/, ''), // File name without extension as title
                 name: file.name,
                 storage_path: filePath,
                 mime_type: file.type,
                 size_bytes: file.size,
-                class_id: actualClassId,
-                subject_id: actualSubjectId,
+                class: String(gradeLevel),
+                section: section,
+                subject: subjectName,
                 uploaded_by: actorId
             };
 
